@@ -1,0 +1,8 @@
+{
+  "name": "MANDAVE ERP",
+  "description": "Multi-tenant Restaurant Management System with AI-powered WhatsApp automation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
