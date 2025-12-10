@@ -15,8 +15,6 @@ const Orders: React.FC = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [restaurantName, setRestaurantName] = useState('MANDAVE DELIVERY');
     
-    // Referência não usada - removida
-
     const [showModal, setShowModal] = useState(false);
     const [newOrder, setNewOrder] = useState<{
         customer_name: string;
@@ -127,8 +125,13 @@ const Orders: React.FC = () => {
     const handleDelete = async (orderId: number) => {
         if(!confirm("Excluir este pedido permanentemente?")) return;
         const { error } = await supabase.from('orders').delete().eq('id', orderId);
-        if(error) toast.error("Erro ao excluir");
-        else toast.success("Pedido excluído");
+        if(error) {
+            toast.error("Erro ao excluir");
+        } else {
+            toast.success("Pedido excluído");
+            // Atualiza o estado removendo o pedido deletado
+            setOrders(prev => prev.filter(o => o.id !== orderId));
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
