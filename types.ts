@@ -1,3 +1,5 @@
+// types.ts
+
 export type OrderStatus = 'pending' | 'accepted' | 'preparing' | 'delivery' | 'finished' | 'cancelled';
 
 export type PaymentMethod = 'credit_card' | 'debit_card' | 'pix' | 'cash';
@@ -17,10 +19,15 @@ export interface Restaurant {
   phone: string;
   address: string;
   delivery_fee: number;
+  delivery_time?: string;
   evolution_instance_id?: string;
   evolution_instance_token?: string;
   is_bot_active?: boolean;
   opening_hours?: OpeningHours;
+  bot_name?: string;
+  bot_instructions?: string;
+  bot_is_active?: boolean;
+  bot_last_closed_response?: any;
   created_at: string;
 }
 
@@ -55,8 +62,9 @@ export interface Order {
   status: OrderStatus;
   total: number;
   payment_method: PaymentMethod;
-  items: OrderItem[]; // JSONB in DB
+  items: OrderItem[];
   origin: OrderOrigin;
+  notes?: string;
   created_at: string;
 }
 
@@ -76,6 +84,29 @@ export interface FinancialMovement {
   amount: number;
   category: string;
   payment_method: PaymentMethod;
-  date: string; // timestamp
+  date: string;
   description?: string;
+}
+
+// 🆕 Tipos do WhatsApp
+export interface WhatsAppConversation {
+  id: string;
+  restaurant_id: string;
+  phone: string;
+  customer_name?: string;
+  last_message: string;
+  last_message_at: string;
+  is_bot_paused: boolean;
+  unread_count: number;
+  created_at: string;
+}
+
+export interface WhatsAppMessage {
+  id: string;
+  conversation_id: string;
+  phone: string;
+  message_text: string;
+  is_from_me: boolean;
+  timestamp: string;
+  created_at: string;
 }

@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Product } from '../types';
 import { syncRAG } from '../services/n8nService';
 import toast from 'react-hot-toast';
-import { Edit, Trash2, Plus, Bot, EyeOff, Upload, X } from 'lucide-react';
+import { Edit, Trash2, Plus, Bot, EyeOff, Upload, X, GripVertical } from 'lucide-react';
 
 const Menu: React.FC = () => {
   const { restaurantId } = useAuth();
@@ -17,6 +17,8 @@ const Menu: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
   
   // Form State
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -27,6 +29,7 @@ const Menu: React.FC = () => {
     image_url: '',
     is_active: true,
     is_visible: true,
+    display_order: 0,
   });
 
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -42,7 +45,7 @@ const Menu: React.FC = () => {
       .from('products')
       .select('*')
       .eq('restaurant_id', restaurantId)
-      .order('name');
+      .order('display_order', { ascending: true });
     
     if (error) {
       toast.error('Erro ao buscar produtos');
@@ -50,6 +53,14 @@ const Menu: React.FC = () => {
       setProducts(data || []);
     }
   };
+
+  // Extrair categorias únicas
+  const categories = Array.from(new Set(products.map(p => p.category)));
+
+  // Filtrar produtos
+  const filteredProducts = selectedCategory === 'all'
+    ? products
+    : products.filter(p => p.category === selectedCategory);
 
   const handleSync = async () => {
     if (!restaurantId) {
@@ -74,38 +85,30 @@ const Menu: React.FC = () => {
     try {
       setIsUploading(true);
 
-      // Validar se é imagem
       if (!file.type.startsWith('image/')) {
         toast.error('Selecione um arquivo de imagem válido');
         return null;
       }
 
-      // Validar tamanho (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('Imagem muito grande (máximo 5MB)');
         return null;
       }
 
-      // Criar nome único para o arquivo
       const timestamp = Date.now();
       const fileName = `${restaurantId}/${timestamp}-${file.name}`;
 
-      // Fazer upload para Supabase Storage
-      const { data, error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('produtos')
         .upload(fileName, file);
 
-      if (error) {
-        toast.error(`Erro ao fazer upload: ${error.message}`);
-        return null;
-      }
+      if (uploadError) throw uploadError;
 
-      // Obter URL pública da imagem
-      const { data: publicData } = supabase.storage
+      const { data } = supabase.storage
         .from('produtos')
         .getPublicUrl(fileName);
 
-      return publicData.publicUrl;
+      return data.publicUrl;
     } catch (e) {
       toast.error('Erro ao fazer upload da imagem');
       console.error(e);
@@ -115,19 +118,16 @@ const Menu: React.FC = () => {
     }
   };
 
-  // Quando o usuário seleciona uma imagem
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Mostrar preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Fazer upload automaticamente
     const imageUrl = await handleImageUpload(file);
     if (imageUrl) {
       setFormData({ ...formData, image_url: imageUrl });
@@ -142,6 +142,7 @@ const Menu: React.FC = () => {
         ...formData,
         restaurant_id: restaurantId,
         price: Number(formData.price),
+        display_order: editingId ? formData.display_order : products.length,
     };
 
     let error;
@@ -169,11 +170,9 @@ const Menu: React.FC = () => {
         setImagePreview('');
         setFormData({
             name: '', description: '', price: 0, category: 'Geral', 
-            image_url: '', is_active: true, is_visible: true
+            image_url: '', is_active: true, is_visible: true, display_order: 0
         });
         fetchProducts();
-        
-        // AUTO SYNC RAG
         handleSync();
     }
   };
@@ -206,6 +205,58 @@ const Menu: React.FC = () => {
     }
   };
 
+  // DRAG & DROP
+  const handleDragStart = (e: React.DragEvent, productId: string) => {
+    setDraggedItem(productId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetProductId: string) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+
+    const draggedProduct = products.find(p => p.id === draggedItem);
+    const targetProduct = products.find(p => p.id === targetProductId);
+
+    if (!draggedProduct || !targetProduct) {
+      setDraggedItem(null);
+      return;
+    }
+
+    // Reordenar apenas dentro da mesma categoria
+    if (selectedCategory !== 'all' && draggedProduct.category !== targetProduct.category) {
+      setDraggedItem(null);
+      toast.error('Só é possível reordenar produtos da mesma categoria');
+      return;
+    }
+
+    const updatedProducts = [...products];
+    const draggedIndex = updatedProducts.findIndex(p => p.id === draggedItem);
+    const targetIndex = updatedProducts.findIndex(p => p.id === targetProductId);
+
+    const [removed] = updatedProducts.splice(draggedIndex, 1);
+    updatedProducts.splice(targetIndex, 0, removed);
+
+    // Atualizar display_order
+    for (let i = 0; i < updatedProducts.length; i++) {
+      updatedProducts[i].display_order = i;
+      
+      await supabase
+        .from('products')
+        .update({ display_order: i })
+        .eq('id', updatedProducts[i].id);
+    }
+
+    setProducts(updatedProducts);
+    setDraggedItem(null);
+    toast.success('Ordem atualizada!');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -223,6 +274,37 @@ const Menu: React.FC = () => {
             <Plus size={18} /> Novo Produto
           </Button>
         </div>
+      </div>
+
+      {/* Filtro de Categorias */}
+      <div className="flex gap-2 flex-wrap items-center">
+        <button
+          onClick={() => setSelectedCategory('all')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            selectedCategory === 'all'
+              ? 'bg-orange-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Todas
+        </button>
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              selectedCategory === cat
+                ? 'bg-orange-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+        <strong>💡 Dica:</strong> Arraste os produtos (ícone ⋮⋮) para reordená-los. A ordem aqui reflete a ordem no cardápio público.
       </div>
 
       {showForm && (
@@ -273,7 +355,7 @@ const Menu: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Seção de Upload de Imagem */}
+                    {/* Upload de Imagem */}
                     <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 bg-white">
                         <div className="flex flex-col items-center justify-center">
                             {imagePreview ? (
@@ -335,9 +417,21 @@ const Menu: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product) => (
-          <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+        {filteredProducts.map((product) => (
+          <Card 
+            key={product.id} 
+            className={`overflow-hidden hover:shadow-lg transition-shadow cursor-move ${
+              draggedItem === product.id ? 'opacity-50' : ''
+            }`}
+            draggable
+            onDragStart={(e) => handleDragStart(e, product.id)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, product.id)}
+          >
             <div className="relative h-48 w-full bg-slate-100">
+                <div className="absolute top-2 left-2 bg-white/90 p-1 rounded cursor-move">
+                    <GripVertical size={20} className="text-gray-600" />
+                </div>
                 {product.image_url ? (
                     <img 
                         src={product.image_url} 

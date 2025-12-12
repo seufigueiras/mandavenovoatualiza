@@ -1,4 +1,3 @@
-
 // Tenta ler de variáveis de ambiente (Vite ou Next.js), se não existir, usa as credenciais de produção fornecidas no PRD.
 
 const getEnv = (key: string, viteKey: string, fallback: string) => {

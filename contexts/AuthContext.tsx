@@ -32,29 +32,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [audioEnabled, setAudioEnabled] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Habilitar áudio (chamado quando usuário clica)
   const enableAudio = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioContextRef.current = audioContext;
+      // Cria o elemento de áudio uma vez
+      if (!audioRef.current) {
+        audioRef.current = new Audio('/audiopedido.mp3');
+        audioRef.current.volume = 0.8; // Volume de 80%
+        audioRef.current.preload = 'auto';
+      }
       
-      // Toca um bip de confirmação (som mais agudo e alto)
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 1200; // Mais agudo
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0.6, audioContext.currentTime); // Mais alto
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.15);
+      // Toca um som de confirmação
+      audioRef.current.play().catch(e => {
+        console.log("Erro ao tocar áudio de confirmação:", e);
+      });
       
       setAudioEnabled(true);
     } catch (e) {
@@ -64,53 +57,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Função para tocar alerta (repete a cada 5 segundos)
   const playNewOrderAlert = () => {
-    if (!audioEnabled) return;
+    if (!audioEnabled || !audioRef.current) return;
 
     if (intervalRef.current) {
       return;
     }
 
-    // Função para tocar o bip (estilo toque de telefone clássico)
+    // Função para tocar o som
     const playBeep = () => {
       try {
-        const audioContext = audioContextRef.current || new (window.AudioContext || (window as any).webkitAudioContext)();
-        const now = audioContext.currentTime;
-        
-        // Padrão de telefone: dois tons alternados rapidamente
-        const createPhoneRing = (startTime: number) => {
-          // Tom ALTO (1000Hz)
-          const osc1 = audioContext.createOscillator();
-          const gain1 = audioContext.createGain();
-          osc1.connect(gain1);
-          gain1.connect(audioContext.destination);
-          osc1.frequency.value = 1000;
-          osc1.type = 'sine';
-          gain1.gain.setValueAtTime(1.0, startTime);
-          gain1.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
-          osc1.start(startTime);
-          osc1.stop(startTime + 0.15);
-          
-          // Tom BAIXO (700Hz) - sobreposto criando efeito
-          const osc2 = audioContext.createOscillator();
-          const gain2 = audioContext.createGain();
-          osc2.connect(gain2);
-          gain2.connect(audioContext.destination);
-          osc2.frequency.value = 700;
-          osc2.type = 'sine';
-          gain2.gain.setValueAtTime(1.0, startTime);
-          gain2.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
-          osc2.start(startTime);
-          osc2.stop(startTime + 0.15);
-        };
-        
-        // 6 rings de telefone (tipo DRRRIIING! DRRRIIING! DRRRIIING!)
-        createPhoneRing(now);           // Ring 1
-        createPhoneRing(now + 0.25);    // Ring 2
-        createPhoneRing(now + 0.5);     // Ring 3
-        createPhoneRing(now + 0.75);    // Ring 4
-        createPhoneRing(now + 1.0);     // Ring 5
-        createPhoneRing(now + 1.25);    // Ring 6
-        
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0; // Reinicia o áudio
+          audioRef.current.play().catch(e => {
+            console.log("Erro ao tocar áudio:", e);
+          });
+        }
       } catch (e) {
         console.log("Erro ao tocar áudio:", e);
       }
@@ -132,6 +93,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+    
+    // Para o áudio se estiver tocando
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
   };
 

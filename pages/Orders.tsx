@@ -77,18 +77,32 @@ const Orders: React.FC = () => {
             if (payload.eventType === 'INSERT') {
                 const newOrderData = payload.new as Order;
                 
+                // 🔍 LOGS DE DEBUG
+                console.log('🆕 NOVO PEDIDO DETECTADO!');
+                console.log('📦 Dados do pedido:', newOrderData);
+                console.log('📊 Status:', newOrderData.status);
+                console.log('🌐 Origin:', newOrderData.origin);
+                console.log('🔊 Audio habilitado?', audioEnabled);
+                
                 fetchOrders();
                 
                 const statusUpper = newOrderData.status?.toUpperCase();
                 const originLower = newOrderData.origin?.toLowerCase();
                 
-                // Só toca som se for pedido do CARDÁPIO DIGITAL
-                if (statusUpper === 'PENDING' && originLower === 'cardapio') {
+                console.log('✅ Status Upper:', statusUpper);
+                console.log('✅ Origin Lower:', originLower);
+                
+                // CORREÇÃO: Incluindo 'whatsapp' para tocar o alerta de novo pedido
+                if (statusUpper === 'PENDING' && (originLower === 'cardapio' || originLower === 'whatsapp')) {
+                    console.log('🔔 TENTANDO TOCAR O SOM!');
                     playNewOrderAlert();
-                    toast.success('Novo pedido do cardápio recebido!');
+                    toast.success(`Novo pedido de ${originLower === 'cardapio' ? 'cardápio' : 'WhatsApp'} recebido!`);
                 } else if (statusUpper === 'PENDING') {
-                    // Pedido manual ou whatsapp - sem som
+                    console.log('📝 Pedido manual ou outra origem');
                     toast.success('Novo pedido recebido!');
+                } else {
+                    console.log('⚠️ Condição não atendida para tocar som');
+                    console.log(`Status: ${statusUpper}, Origin: ${originLower}`);
                 }
             } else if (payload.eventType === 'UPDATE') {
                 const updatedOrder = payload.new as Order;
@@ -104,7 +118,7 @@ const Orders: React.FC = () => {
                 supabase.removeChannel(channel);
             };
         }
-    }, [restaurantId, fetchOrders, playNewOrderAlert]);
+    }, [restaurantId, fetchOrders, playNewOrderAlert, audioEnabled]);
 
     const updateStatus = async (orderId: number, newStatus: OrderStatus) => {
         const statusUpperCase = newStatus.toUpperCase();
@@ -129,7 +143,6 @@ const Orders: React.FC = () => {
             toast.error("Erro ao excluir");
         } else {
             toast.success("Pedido excluído");
-            // Atualiza o estado removendo o pedido deletado
             setOrders(prev => prev.filter(o => o.id !== orderId));
         }
     };

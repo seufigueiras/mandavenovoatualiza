@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, UtensilsCrossed, Wallet, Settings, LogOut, Store, Users } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, UtensilsCrossed, Wallet, Settings, LogOut, Store, Users, MessageCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar: React.FC = () => {
@@ -12,6 +12,7 @@ const Sidebar: React.FC = () => {
     { name: 'Pedidos', path: '/orders', icon: <ShoppingBag size={20} /> },
     { name: 'Cardápio', path: '/menu', icon: <UtensilsCrossed size={20} /> },
     { name: 'Clientes', path: '/customers', icon: <Users size={20} /> },
+    { name: 'WhatsApp', path: '/whatsapp', icon: <MessageCircle size={20} /> }, // 🆕 NOVO
     { name: 'Financeiro', path: '/finance', icon: <Wallet size={20} /> },
     { name: 'Configurações', path: '/settings', icon: <Settings size={20} /> },
   ];
