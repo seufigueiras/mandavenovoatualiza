@@ -17,9 +17,10 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     if (!iframeDoc) return;
 
     // ============================================================
-    // Logo do projeto (caminho relativo para public/logo.png)
+    // Logo do projeto (Caminho ABSOLUTO simplificado para /logo.png)
     // ============================================================
-    const logoUrl = `${window.location.origin}/logo.png`;
+    // *** CORREÇÃO AQUI: Usando o caminho absoluto simples. ***
+    const logoUrl = "/logo.png";
     // ============================================================
 
     const printHtml = `
