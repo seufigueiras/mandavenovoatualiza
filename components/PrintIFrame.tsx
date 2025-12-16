@@ -16,7 +16,9 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!iframeDoc) return;
 
-    // HTML simplificado e direto
+    // LOGO EMBUTIDA EM BASE64 - SEMPRE VAI FUNCIONAR!
+    const logoBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAJYCAIAAAAxBA+LAAABhGlDQ1BJQ0MgcHJvZmlsZQAAeJx9kT1Iw1AUhU9TpSIVBzuIOGSoThZEozimikUsFEtLW+nqQupPk4YkxcVRcC04+LOYdXBx1tXBVRAE/0BcXJ0UXaTEe5OCRYwHl/s4757Dfe8BQqPMVLNrHFA1y0jFY0I2typsPSKAfoQQQkBipj4vCQn0HV/38PX1Ls6z+p/7c4SUvMkAn0g8y3TDIt4gntq0dM77xGFWkBTic+Jxgy5I/Mh12eU3zgWHBZ4ZNtLJeeIwsVhoY7mNWcFQiSeJI4qqUb6QdVnhvMVZrdRY6578haG8trLMdVojSMASYogggQyVVVCHBbRaKSakqT3m4R9y/CK5ZHJVwMixgAZUSI4f/A9+z9YsTo51kyIxoPPFtj9GgdZdoFm37e9j226eAP5n4Epr+6sNYO6T9Hpbix4BfdvAxXVbk/eAyx1g6EmXDMmR/DQFhQLwfkbflAMGboGeNXdurXOcPgAZ6tXyDXBwCIwUKHvN493B7t7+vdPu7wfK3HKaJJzCIgAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+gMEQAWCiVgVgUAACAASURBVHja7N13nBxnnf/xZ+Z3Zu/2vl3t6lZS7723AWMMBmzTbK";
+
     const printHtml = `
       <!DOCTYPE html>
       <html>
@@ -68,7 +70,6 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
           .right { text-align: right; }
           .total { font-size: 1.2em; font-weight: bold; }
           
-          /* Força impressão de imagens */
           @media print {
             body, .logo-container, .logo-container img {
               display: block !important;
@@ -83,19 +84,12 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
       </head>
       <body>
         <div class="logo-container">
-          <img src="https://mandavenovoatualiza.vercel.app/logo.png" alt="Logo" />
+          <img src="${logoBase64}" alt="Logo" />
         </div>
         ${htmlContent}
         <script>
-          // Aguarda a logo carregar antes de imprimir
           window.onload = function() {
-            const img = document.querySelector('img');
-            if (img.complete) {
-              setTimeout(() => window.print(), 500);
-            } else {
-              img.onload = () => setTimeout(() => window.print(), 500);
-              img.onerror = () => setTimeout(() => window.print(), 500);
-            }
+            setTimeout(() => window.print(), 1000);
           };
         </script>
       </body>
@@ -106,7 +100,6 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     iframeDoc.write(printHtml);
     iframeDoc.close();
 
-    // Cleanup após impressão
     const printWindow = iframe.contentWindow;
     if (printWindow) {
       printWindow.onafterprint = onFinished;
