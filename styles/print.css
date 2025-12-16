@@ -1,4 +1,4 @@
-/* Localização: [DIRETÓRIO RAIZ]/styles/print.css */
+/* Localização: styles/print.css */
 
 /* Este bloco garante que, se o PrintIFrame falhar, a impressão padrão ainda se concentre */
 /* no conteúdo do ticket (embora o PrintIFrame seja o método preferido agora). */
@@ -22,8 +22,8 @@
     }
     
     /* 3. Estilos básicos para o corpo da página na impressão */
+    /* 🔴 REMOVIDO: visibility: hidden - estava bloqueando a logo! */
     body {
-        visibility: hidden !important; 
         margin: 0 !important;
         padding: 0 !important;
         font-family: monospace, sans-serif !important; /* Fonte padrão de recibos */
@@ -38,4 +38,13 @@
     }
     .print-only th:nth-child(1), .print-only td:nth-child(1) { width: 10%; } /* Coluna Qtd */
     .print-only th:nth-child(3), .print-only td:nth-child(3) { width: 25%; text-align: right; } /* Coluna Valor */
+    
+    /* 🟢 ADICIONA: Garante que imagens apareçam na impressão */
+    img {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 }

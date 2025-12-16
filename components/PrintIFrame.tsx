@@ -16,90 +16,88 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!iframeDoc) return;
 
-    // Monta o HTML com a logo FORÇADA para impressão
+    // HTML simplificado e direto
     const printHtml = `
+      <!DOCTYPE html>
       <html>
       <head>
-        <title>Recibo #${Date.now()}</title>
+        <meta charset="UTF-8">
+        <title>Recibo</title>
         <style>
+          @page { 
+            size: 80mm auto; 
+            margin: 0; 
+          }
+          
           * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
           }
           
-          @page { 
-            size: 80mm auto; 
-            margin: 0; 
-          }
-          
           body {
-            margin: 0;
-            padding: 5mm; 
-            font-family: 'Courier New', monospace; 
-            font-size: 10pt;
             width: 80mm;
+            padding: 5mm;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
             background: white;
+            color: black;
           }
           
-          /* 🖼️ ESTILOS DA LOGO - FORÇADOS PARA IMPRESSÃO */
           .logo-container {
             text-align: center;
             margin-bottom: 10px;
             padding-bottom: 10px;
             border-bottom: 1px dashed #000;
-            page-break-inside: avoid;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
           }
           
           .logo-container img {
-            max-width: 60mm !important;
-            width: 60mm !important;
-            height: auto !important;
-            display: block !important;
-            margin: 0 auto !important;
-            page-break-inside: avoid !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          
-          /* Garante que a logo apareça na impressão */
-          @media print {
-            .logo-container {
-              display: block !important;
-              visibility: visible !important;
-            }
-            .logo-container img {
-              display: block !important;
-              visibility: visible !important;
-              opacity: 1 !important;
-            }
+            width: 60mm;
+            height: auto;
+            display: block;
+            margin: 0 auto;
           }
           
           table {
+            width: 100%;
             border-collapse: collapse;
             margin-top: 5px;
-            width: 100%;
           }
           
           .center { text-align: center; }
           .right { text-align: right; }
           .total { font-size: 1.2em; font-weight: bold; }
+          
+          /* Força impressão de imagens */
+          @media print {
+            body, .logo-container, .logo-container img {
+              display: block !important;
+              visibility: visible !important;
+            }
+            img {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          }
         </style>
       </head>
       <body>
-        <!-- 🖼️ LOGO NO TOPO -->
         <div class="logo-container">
-          <img 
-            src="https://mandavenovoatualiza.vercel.app/logo.png" 
-            alt="Cantinho da Bere"
-            crossorigin="anonymous"
-          />
+          <img src="https://mandavenovoatualiza.vercel.app/logo.png" alt="Logo" />
         </div>
-        
-        <!-- CONTEÚDO DO TICKET -->
         ${htmlContent}
+        <script>
+          // Aguarda a logo carregar antes de imprimir
+          window.onload = function() {
+            const img = document.querySelector('img');
+            if (img.complete) {
+              setTimeout(() => window.print(), 500);
+            } else {
+              img.onload = () => setTimeout(() => window.print(), 500);
+              img.onerror = () => setTimeout(() => window.print(), 500);
+            }
+          };
+        </script>
       </body>
       </html>
     `;
@@ -108,28 +106,18 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     iframeDoc.write(printHtml);
     iframeDoc.close();
 
-    // Aguarda carregar e imprime
+    // Cleanup após impressão
     const printWindow = iframe.contentWindow;
-    
-    const executePrint = () => {
-      if (!printWindow) return;
-      
-      // Aguarda um pouco mais para garantir que a logo carregou
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-        onFinished();
-      }, 2000); // 2 segundos de espera
-    };
-
-    iframe.onload = executePrint;
+    if (printWindow) {
+      printWindow.onafterprint = onFinished;
+    }
 
   }, [htmlContent, onFinished]);
 
   return (
     <iframe
       ref={iframeRef}
-      style={{ display: 'none', position: 'absolute' }}
+      style={{ display: 'none', position: 'absolute', left: '-9999px' }}
       title="Print Area"
     />
   );
