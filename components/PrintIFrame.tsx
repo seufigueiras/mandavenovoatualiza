@@ -63,7 +63,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
       <body>
         <!-- 🖼️ LOGO NO TOPO -->
         <div class="logo-container">
-          <img src="/logo.png" alt="Logo" />
+          <img src="https://mandavenovoatualiza.vercel.app/logo.png" alt="Logo" />
         </div>
         
         <!-- CONTEÚDO DO TICKET -->
