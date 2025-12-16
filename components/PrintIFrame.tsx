@@ -1,4 +1,4 @@
-// components/ui/PrintIFrame.tsx
+// components/PrintIFrame.tsx
 import React, { useEffect, useRef } from 'react';
 
 interface PrintIFrameProps {
@@ -13,41 +13,68 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    // 1. Prepara o Documento do iFrame
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!iframeDoc) return;
 
-    // 2. Monta o HTML Básico para Recibo 80mm COM LOGO
+    // Monta o HTML com a logo FORÇADA para impressão
     const printHtml = `
       <html>
       <head>
         <title>Recibo #${Date.now()}</title>
         <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
           @page { 
             size: 80mm auto; 
             margin: 0; 
           }
+          
           body {
             margin: 0;
             padding: 5mm; 
-            font-family: 'monospace', sans-serif; 
+            font-family: 'Courier New', monospace; 
             font-size: 10pt;
-            visibility: visible !important;
-            width: auto !important;
+            width: 80mm;
+            background: white;
           }
           
-          /* 🖼️ ESTILOS DA LOGO */
+          /* 🖼️ ESTILOS DA LOGO - FORÇADOS PARA IMPRESSÃO */
           .logo-container {
             text-align: center;
             margin-bottom: 10px;
             padding-bottom: 10px;
             border-bottom: 1px dashed #000;
+            page-break-inside: avoid;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
+          
           .logo-container img {
-            max-width: 60mm;
-            height: auto;
-            display: block;
-            margin: 0 auto;
+            max-width: 60mm !important;
+            width: 60mm !important;
+            height: auto !important;
+            display: block !important;
+            margin: 0 auto !important;
+            page-break-inside: avoid !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
+          /* Garante que a logo apareça na impressão */
+          @media print {
+            .logo-container {
+              display: block !important;
+              visibility: visible !important;
+            }
+            .logo-container img {
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+            }
           }
           
           table {
@@ -55,6 +82,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
             margin-top: 5px;
             width: 100%;
           }
+          
           .center { text-align: center; }
           .right { text-align: right; }
           .total { font-size: 1.2em; font-weight: bold; }
@@ -64,10 +92,9 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
         <!-- 🖼️ LOGO NO TOPO -->
         <div class="logo-container">
           <img 
-            src="/logo.png" 
-            alt="Logo" 
-            id="receiptLogo"
-            onerror="this.style.display='none'"
+            src="https://mandavenovoatualiza.vercel.app/logo.png" 
+            alt="Cantinho da Bere"
+            crossorigin="anonymous"
           />
         </div>
         
@@ -81,58 +108,21 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     iframeDoc.write(printHtml);
     iframeDoc.close();
 
-    // 3. AGUARDA A LOGO CARREGAR ANTES DE IMPRIMIR
+    // Aguarda carregar e imprime
     const printWindow = iframe.contentWindow;
     
-    const waitForImageAndPrint = () => {
+    const executePrint = () => {
       if (!printWindow) return;
-
-      const logoImg = iframeDoc.getElementById('receiptLogo') as HTMLImageElement;
       
-      if (logoImg) {
-        // Se a imagem já carregou
-        if (logoImg.complete && logoImg.naturalHeight !== 0) {
-          console.log('✅ Logo carregada com sucesso!');
-          printWindow.focus();
-          printWindow.print();
-          onFinished();
-        } else {
-          // Aguarda o carregamento da imagem
-          logoImg.onload = () => {
-            console.log('✅ Logo carregada após espera!');
-            printWindow.focus();
-            printWindow.print();
-            onFinished();
-          };
-          
-          // Se a imagem falhar, imprime sem ela
-          logoImg.onerror = () => {
-            console.warn('⚠️ Erro ao carregar logo, imprimindo sem ela...');
-            printWindow.focus();
-            printWindow.print();
-            onFinished();
-          };
-          
-          // Timeout de segurança (3 segundos)
-          setTimeout(() => {
-            console.log('⏱️ Timeout atingido, imprimindo...');
-            printWindow.focus();
-            printWindow.print();
-            onFinished();
-          }, 3000);
-        }
-      } else {
-        // Se não encontrou a imagem, imprime normalmente
+      // Aguarda um pouco mais para garantir que a logo carregou
+      setTimeout(() => {
         printWindow.focus();
         printWindow.print();
         onFinished();
-      }
+      }, 2000); // 2 segundos de espera
     };
 
-    // Aguarda o iframe carregar completamente
-    iframe.onload = () => {
-      setTimeout(waitForImageAndPrint, 500);
-    };
+    iframe.onload = executePrint;
 
   }, [htmlContent, onFinished]);
 
