@@ -17,10 +17,9 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     if (!iframeDoc) return;
 
     // ============================================================
-    // Logo do projeto (Caminho ABSOLUTO simplificado para /logo.png)
+    // VOLTANDO PARA A URL COMPLETA. É MAIS SEGURO DENTRO DE IFRAMES.
     // ============================================================
-    // *** CORREÇÃO AQUI: Usando o caminho absoluto simples. ***
-    const logoUrl = "/logo.png";
+    const logoUrl = `${window.location.origin}/logo.png`;
     // ============================================================
 
     const printHtml = `
@@ -175,12 +174,13 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
                   triggerPrint();
                 };
                 
-                logoImg.onerror = function(e) {
-                  console.error('Erro ao carregar logo:', e);
-                  console.error('URL tentada:', logoImg.src);
-                  logoImg.style.display = 'none';
-                  triggerPrint();
-                };
+                // *** REMOVIDO: Comentado o bloco de erro para não esconder a logo se falhar. ***
+                // logoImg.onerror = function(e) {
+                //   console.error('Erro ao carregar logo:', e);
+                //   console.error('URL tentada:', logoImg.src);
+                //   logoImg.style.display = 'none'; 
+                //   triggerPrint();
+                // };
                 
                 // Timeout de segurança
                 setTimeout(() => {
