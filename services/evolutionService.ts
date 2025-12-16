@@ -38,22 +38,10 @@ export const sendWhatsAppMessage = async ({ phone, message }: SendMessageParams)
     console.log('📱 Para:', phone);
     console.log('💬 Mensagem:', message);
 
-    // ✅ CORREÇÃO: Garantir formato correto do JID
-    let formattedPhone = phone;
+    // ✅ USAR O PHONE EXATAMENTE COMO VEM (já tem @lid ou @s.whatsapp.net)
+    const formattedPhone = phone;
     
-    // Remover qualquer @ incompleto ou malformado
-    if (phone.includes('@') && !phone.includes('@s.whatsapp.net') && !phone.includes('@lid')) {
-      formattedPhone = phone.split('@')[0];
-    }
-    
-    if (!formattedPhone.includes('@')) {
-      // Se não tem @, limpa e adiciona @s.whatsapp.net
-      const cleanPhone = formattedPhone.replace(/\D/g, '');
-      formattedPhone = `${cleanPhone}@s.whatsapp.net`;
-    }
-    
-    console.log('📞 Número original:', phone);
-    console.log('📞 Número formatado:', formattedPhone);
+    console.log('📞 JID para envio:', formattedPhone);
 
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
       method: 'POST',
