@@ -1,4 +1,4 @@
-// mandavenovo/pages/Checkout.tsx - CÓDIGO FINAL E CORRIGIDO
+// mandavenovo/pages/Checkout.tsx - VERSÃO CORRIGIDA SEM RPC
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -96,6 +96,7 @@ const Checkout: React.FC = () => {
         }));
     };
 
+    // 🆕 INSERÇÃO DIRETA NO BANCO (SEM RPC)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -114,7 +115,7 @@ const Checkout: React.FC = () => {
 
         setIsLoading(true);
 
-        const orderItemsForRPC = items.map(item => ({
+        const orderItemsForDB = items.map(item => ({
             product_id: item.product_id,
             name: item.name,
             price: item.price,
@@ -122,38 +123,35 @@ const Checkout: React.FC = () => {
         }));
 
         try {
-            const { data, error } = await supabase.rpc('place_order', {
-                p_restaurant_id: restaurantId,
-                p_customer_name: formData.customerName,
-                p_customer_phone: formData.customerPhone,
-                p_customer_address: formData.orderType === 'DELIVERY' ? formData.customerAddress : null,
-                p_order_type: formData.orderType,
-                p_total_amount: totalComTaxa,
-                p_payment_method: formData.paymentMethod,
-                p_items: orderItemsForRPC,
-                p_origin: 'CARDAPIO'
-            });
+            // 🆕 INSERIR DIRETO NA TABELA ORDERS
+            const { data, error } = await supabase
+                .from('orders')
+                .insert([
+                    {
+                        restaurant_id: restaurantId,
+                        customer_name: formData.customerName,
+                        customer_phone: formData.customerPhone,
+                        delivery_address: formData.orderType === 'DELIVERY' ? formData.customerAddress : null,
+                        order_type: formData.orderType, // 🔥 AGORA VAI SALVAR CERTO!
+                        total: totalComTaxa,
+                        payment_method: formData.paymentMethod,
+                        items: orderItemsForDB,
+                        origin: 'cardapio',
+                        status: 'PENDING'
+                    }
+                ])
+                .select()
+                .single();
 
             if (error) throw new Error(error.message);
 
-            let orderId = data;
-            
-            if (Array.isArray(data) && data.length > 0) {
-                orderId = data[0];
+            if (data) {
+                setNewOrderId(String(data.id));
+                setFinalOrderDetails({ items, total: totalComTaxa, formData });
+                setOrderPlaced(true);
+                toast.success("Pedido enviado com sucesso!");
+                clearCart();
             }
-
-            if (typeof orderId === 'object' && orderId !== null && (orderId as any).id) {
-                orderId = (orderId as any).id;
-            }
-
-            setNewOrderId(String(orderId));
-            
-            setFinalOrderDetails({ items, total: totalComTaxa, formData });
-
-            setOrderPlaced(true);
-            toast.success("Pedido enviado com sucesso!");
-
-            clearCart(); 
             
         } catch (error) {
             console.error("Erro ao finalizar pedido:", error);
