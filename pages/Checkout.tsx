@@ -1,4 +1,4 @@
-// mandavenovo/pages/Checkout.tsx - VERSÃO CORRIGIDA COM TAXA VISÍVEL
+// mandavenovo/pages/Checkout.tsx - CÓDIGO FINAL E CORRIGIDO
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -21,7 +21,7 @@ interface FormData {
 }
 
 // Função de formatação do WhatsApp
-const formatWhatsappMessage = (orderId: string, formData: FormData, items: any[], subtotal: number, taxa: number, total: number, restaurantName: string): string => {
+const formatWhatsappMessage = (orderId: string, formData: FormData, items: any[], total: number, restaurantName: string): string => {
     const safeOrderId = String(orderId || '').substring(0, 8);
     const addressLine = formData.orderType === 'DELIVERY' ? `\n*Endereço:* ${formData.customerAddress}` : '';
     const orderItems = items.map(item => ` - *${item.quantity}x* ${item.name} (R$ ${item.price.toFixed(2)})`).join('\n');
@@ -32,12 +32,6 @@ const formatWhatsappMessage = (orderId: string, formData: FormData, items: any[]
     message += `*Tipo de Serviço:* ${formData.orderType === 'DELIVERY' ? 'ENTREGA 🛵' : 'RETIRADA 📦'}${addressLine}\n`;
     message += `*Pagamento:* ${formData.paymentMethod}\n\n`;
     message += `--- ITENS DO PEDIDO ---\n${orderItems}\n\n`;
-    message += `*Subtotal:* R$ ${subtotal.toFixed(2)}\n`;
-    
-    if (formData.orderType === 'DELIVERY' && taxa > 0) {
-        message += `*Taxa de Entrega:* R$ ${taxa.toFixed(2)}\n`;
-    }
-    
     message += `*TOTAL: R$ ${total.toFixed(2)}*`;
 
     return encodeURIComponent(message);
@@ -60,11 +54,10 @@ const Checkout: React.FC = () => {
     const [newOrderId, setNewOrderId] = useState('');
     const [restaurantPhone, setRestaurantPhone] = useState(''); 
     const [restaurantName, setRestaurantName] = useState('Seu Restaurante');
-    // 🆕 NOVO ESTADO: Taxa de entrega
     const [deliveryFee, setDeliveryFee] = useState(0);
     const [finalOrderDetails, setFinalOrderDetails] = useState<any>(null); 
 
-    // 🆕 CALCULAR SUBTOTAL E TOTAL COM TAXA
+    // Calcular subtotal e total com taxa
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const taxaAplicada = formData.orderType === 'DELIVERY' ? deliveryFee : 0;
     const totalComTaxa = subtotal + taxaAplicada;
@@ -133,9 +126,9 @@ const Checkout: React.FC = () => {
                 p_restaurant_id: restaurantId,
                 p_customer_name: formData.customerName,
                 p_customer_phone: formData.customerPhone,
-                p_customer_address: formData.customerAddress || null,
+                p_customer_address: formData.orderType === 'DELIVERY' ? formData.customerAddress : null,
                 p_order_type: formData.orderType,
-                p_total_amount: totalComTaxa, // 🆕 USANDO O TOTAL COM TAXA
+                p_total_amount: totalComTaxa,
                 p_payment_method: formData.paymentMethod,
                 p_items: orderItemsForRPC,
                 p_origin: 'CARDAPIO'
@@ -155,14 +148,7 @@ const Checkout: React.FC = () => {
 
             setNewOrderId(String(orderId));
             
-            // 🆕 Salva os detalhes incluindo subtotal e taxa
-            setFinalOrderDetails({ 
-                items, 
-                subtotal, 
-                taxa: taxaAplicada, 
-                total: totalComTaxa, 
-                formData 
-            });
+            setFinalOrderDetails({ items, total: totalComTaxa, formData });
 
             setOrderPlaced(true);
             toast.success("Pedido enviado com sucesso!");
@@ -186,8 +172,6 @@ const Checkout: React.FC = () => {
             newOrderId, 
             finalOrderDetails.formData, 
             finalOrderDetails.items, 
-            finalOrderDetails.subtotal,
-            finalOrderDetails.taxa,
             finalOrderDetails.total,
             restaurantName
         );
@@ -255,7 +239,7 @@ const Checkout: React.FC = () => {
                         </div>
                     ))}
 
-                    {/* 🆕 MOSTRANDO SUBTOTAL, TAXA E TOTAL */}
+                    {/* MOSTRANDO SUBTOTAL, TAXA E TOTAL */}
                     <div className="pt-4 border-t mt-4 space-y-2">
                         <div className="flex justify-between items-center text-lg text-slate-700">
                             <span>Subtotal:</span>
@@ -291,18 +275,18 @@ const Checkout: React.FC = () => {
                     {/* TIPO DE SERVIÇO */}
                     <div className="bg-white p-5 rounded-lg shadow">
                         <h2 className="text-lg font-semibold mb-3">Tipo de Serviço</h2>
-                        <div className="flex space-x-3">
+                        <div className="flex flex-col space-y-2">
                             <Button
                                 type="button"
                                 onClick={() => handleOrderTypeChange('PICKUP')}
-                                className={formData.orderType === 'PICKUP' ? 'bg-indigo-600' : 'bg-gray-200 text-slate-700 hover:bg-gray-300'}
+                                className={`w-full justify-center ${formData.orderType === 'PICKUP' ? 'bg-indigo-600' : 'bg-gray-200 text-slate-700 hover:bg-gray-300'}`}
                             >
-                                <Package size={16} className="mr-2" /> Retirada
+                                <Package size={16} className="mr-2" /> Retirada (Balcão)
                             </Button>
                             <Button
                                 type="button"
                                 onClick={() => handleOrderTypeChange('DELIVERY')}
-                                className={formData.orderType === 'DELIVERY' ? 'bg-indigo-600' : 'bg-gray-200 text-slate-700 hover:bg-gray-300'}
+                                className={`w-full justify-center ${formData.orderType === 'DELIVERY' ? 'bg-indigo-600' : 'bg-gray-200 text-slate-700 hover:bg-gray-300'}`}
                             >
                                 <MapPin size={16} className="mr-2" /> Entrega
                             </Button>
