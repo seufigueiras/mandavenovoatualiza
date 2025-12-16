@@ -7,8 +7,10 @@ interface PrintIFrameProps {
   onFinished: () => void;
 }
 
+// Retornando à sintaxe React.FC para máxima compatibilidade no deploy
 const PrintIFrame: React.FC<PrintIFrameProps> = (props) => { 
   const { htmlContent, onFinished } = props; 
+
   const printAreaRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -17,47 +19,35 @@ const PrintIFrame: React.FC<PrintIFrameProps> = (props) => {
     
     if (printArea) {
         
-        // 🛠️ MUDANÇA: Injeção da Logo Recriada com HTML/CSS Puro (Sem Imagem)
-        const logoHtmlPuro = `
-            <div style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px dashed #000; color: #000 !important;">
-                
-                <div style="
-                    font-size: 12pt !important; 
-                    font-weight: bold !important; 
-                    text-transform: uppercase; 
-                    line-height: 1 !important; 
-                    margin-bottom: 2px;
-                    -webkit-print-color-adjust: exact !important;
+        // **INJEÇÃO HTML COM ESTILOS INLINE AGRESSIVOS PARA A LOGO**
+        printArea.innerHTML = `
+            <div style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px dashed #000;">
+                <img 
+                  src="/logo.png" 
+                  alt="Logo Cantinho da Bere"
+                  
+                  style="
+                    max-width: 180px !important; 
+                    max-height: 100px !important; 
+                    width: auto !important; 
+                    height: auto !important; 
+                    display: block !important; 
+                    margin: 0 auto 8px auto !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    min-width: 50px !important; 
+                    min-height: 50px !important;
+                    -webkit-print-color-adjust: exact !important; 
                     print-color-adjust: exact !important;
-                ">
-                    Cantinho da
-                </div>
-
-                <div style="
-                    font-family: 'Courier New', monospace; /* Fonte simples garantida */
-                    font-size: 32pt !important; 
-                    font-weight: 900 !important; /* Extra Bold */
-                    line-height: 0.8 !important; /* Diminui a altura da linha para juntar as palavras */
-                    text-transform: uppercase; 
-                    margin-bottom: 5px;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                ">
-                    BERE
-                </div>
-
-                <div style="font-size: 10pt; font-weight: normal;">Gestão de Restaurantes</div>
+                  "
+                />
+                <div style="font-size: 14pt; font-weight: bold;">CANTINHO DA BERE</div>
             </div>
-        `;
-        
-        const footerHtml = `
+            ${htmlContent}
             <div class="footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; text-align: center; font-size: 9pt;">
                 Obrigado pela preferência!
             </div>
         `;
-        
-        // Concatena todo o conteúdo
-        printArea.innerHTML = logoHtmlPuro + htmlContent + footerHtml;
         
         window.print();
 
@@ -68,7 +58,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = (props) => {
     }
   }, [htmlContent, onFinished]);
 
-  // Retorno do componente (inalterado)
+  // Retorna a DIV escondida com o ref
   return (
     <div 
       ref={printAreaRef}
@@ -78,6 +68,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = (props) => {
         position: 'absolute', 
         top: '-9999px', 
         left: '-9999px',
+        // O tamanho será ajustado pelo CSS externo (print.css)
         fontFamily: 'Courier New, monospace'
       }} 
     />
