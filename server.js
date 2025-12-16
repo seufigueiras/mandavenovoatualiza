@@ -653,7 +653,12 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
                        '[Mídia não suportada]';
         }
 
-        console.log(`📩 ${phone}: ${messageText}`);
+        // ✅ IMPORTANTE: Remover APENAS @s.whatsapp.net para buscar no banco (mas manter @lid)
+        const phoneForDb = phone.replace('@s.whatsapp.net', '');
+        
+        console.log(`📩 Original: ${phone}`);
+        console.log(`📩 Para DB: ${phoneForDb}`);
+        console.log(`📩 Mensagem: ${messageText}`);
 
         const config = await buscarConfiguracoes();
 
@@ -675,7 +680,7 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
         let { data: conversation } = await supabase
           .from('whatsapp_conversations')
           .select('*')
-          .eq('phone', phone)
+          .eq('phone', phoneForDb)
           .eq('restaurant_id', RESTAURANT_ID)
           .single();
 
@@ -692,8 +697,8 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
             .from('whatsapp_conversations')
             .insert({
               restaurant_id: RESTAURANT_ID,
-              phone: phone,
-              contact_name: message.pushName || phone,
+              phone: phoneForDb,
+              contact_name: message.pushName || phoneForDb,
               ...updateData,
               unread_count: 1, 
               is_bot_paused: false,
@@ -716,7 +721,7 @@ app.post('/api/whatsapp-webhook', async (req, res) => {
             .from('whatsapp_messages')
             .insert({
               conversation_id: conversation.id,
-              phone: phone,
+              phone: phoneForDb,
               message_text: messageText,
               is_from_me: false,
             });
