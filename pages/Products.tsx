@@ -1,4 +1,3 @@
-// ====== imports iguais ======
 import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -8,7 +7,6 @@ import { supabase } from '../services/supabaseClient';
 import toast from 'react-hot-toast';
 import { Plus, UtensilsCrossed, Trash2, Edit, Save, X, Upload } from 'lucide-react';
 
-// ====== types ======
 type Product = {
   id: string;
   category: string;
@@ -34,7 +32,7 @@ const Products: React.FC = () => {
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // ====== ADD ======
+  // ADD
   const [newProductName, setNewProductName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -43,7 +41,7 @@ const Products: React.FC = () => {
   const [newImagePreview, setNewImagePreview] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  // ====== EDIT ======
+  // EDIT
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<Product>>({});
   const [editImagePreview, setEditImagePreview] = useState('');
@@ -53,7 +51,7 @@ const Products: React.FC = () => {
     if (restaurantId) fetchProductsAndGroup();
   }, [restaurantId]);
 
-  // ====== upload ======
+  // UPLOAD
   const handleImageUpload = async (file: File): Promise<string | null> => {
     const fileName = `${restaurantId}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('produtos').upload(fileName, file);
@@ -83,7 +81,7 @@ const Products: React.FC = () => {
     setIsUploading(false);
   };
 
-  // ====== fetch ======
+  // FETCH
   const fetchProductsAndGroup = async () => {
     setLoading(true);
     const { data } = await supabase
@@ -105,7 +103,7 @@ const Products: React.FC = () => {
     setLoading(false);
   };
 
-  // ====== add ======
+  // ADD
   const handleAddProduct = async () => {
     setIsAdding(true);
 
@@ -130,18 +128,33 @@ const Products: React.FC = () => {
     setIsAdding(false);
   };
 
+  // DELETE
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (!confirm(`Excluir "${name}"?`)) return;
+    await supabase.from('products').delete().eq('id', id);
+    fetchProductsAndGroup();
+  };
+
+  // EDIT
   const startEditing = (p: Product) => {
     setEditingProductId(p.id);
     setEditData(p);
     setEditImagePreview(p.image_url || '');
   };
 
+  const cancelEditing = () => {
+    setEditingProductId(null);
+    setEditData({});
+    setEditImagePreview('');
+  };
+
   const handleUpdateProduct = async () => {
-    await supabase.from('products')
+    await supabase
+      .from('products')
       .update(editData)
       .eq('id', editingProductId);
 
-    setEditingProductId(null);
+    cancelEditing();
     fetchProductsAndGroup();
   };
 
@@ -161,14 +174,13 @@ const Products: React.FC = () => {
           <Input placeholder="Nome" value={newProductName} onChange={e => setNewProductName(e.target.value)} />
           <Input placeholder="Preço" type="number" value={newPrice} onChange={e => setNewPrice(e.target.value)} />
           <Input placeholder="Categoria" value={newCategory} onChange={e => setNewCategory(e.target.value)} />
-
           <label className="bg-blue-600 text-white rounded-md flex items-center justify-center cursor-pointer">
             <Upload size={16} />
             <input type="file" hidden ref={fileInputRef} onChange={handleFileSelect} />
           </label>
         </div>
 
-        {/* 🔹 DESCRIÇÃO */}
+        {/* DESCRIÇÃO */}
         <Input
           className="mt-3"
           placeholder="Descrição do produto (o que vem no item)"
@@ -187,21 +199,30 @@ const Products: React.FC = () => {
           <CardHeader><CardTitle>{cat}</CardTitle></CardHeader>
           <CardContent>
             {groupedProducts[cat].map(p => (
-              <div key={p.id} className="flex justify-between p-3 border rounded mb-2">
-                <div>
-                  <strong>{p.name}</strong>
-                  {p.description && (
-                    <p className="text-sm text-gray-500">{p.description}</p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => startEditing(p)}>
-                    <Edit size={16} />
-                  </Button>
-                  <Button size="sm" variant="ghost">
-                    <Trash2 size={16} className="text-red-500" />
-                  </Button>
-                </div>
+              <div key={p.id} className="p-3 border rounded mb-2">
+                {editingProductId === p.id ? (
+                  <>
+                    <Input value={editData.name || ''} onChange={e => setEditData({ ...editData, name: e.target.value })} />
+                    <Input value={editData.description || ''} onChange={e => setEditData({ ...editData, description: e.target.value })} />
+                    <div className="flex gap-2 mt-2">
+                      <Button size="sm" onClick={handleUpdateProduct}><Save size={14} /></Button>
+                      <Button size="sm" variant="ghost" onClick={cancelEditing}><X size={14} /></Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between">
+                    <div>
+                      <strong>{p.name}</strong>
+                      {p.description && <p className="text-sm text-gray-500">{p.description}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => startEditing(p)}><Edit size={16} /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDeleteProduct(p.id, p.name)}>
+                        <Trash2 size={16} className="text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </CardContent>
