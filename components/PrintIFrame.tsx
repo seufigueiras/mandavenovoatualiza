@@ -8,20 +8,40 @@ interface PrintIFrameProps {
 }
 
 const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) => {
-
+  
   useEffect(() => {
-
+    
     const printArea = document.getElementById('print-area-content');
-
+    
     // Se o componente for renderizado, injeta o HTML e imprime a página principal
     if (printArea) {
-        // 1. Injeta o HTML do comprovante (com a logo normal) no elemento escondido
+        
+        // **ATENÇÃO: Código HTML injetado com estilos inline agressivos para a logo**
         printArea.innerHTML = `
             <div class="logo-container" style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px dashed #000;">
                 <img 
                   src="/logo.png" 
                   alt="Logo Cantinho da Bere"
-                  style="max-width: 180px; max-height: 100px; display: block; margin: 0 auto 8px auto;"
+                  
+                  /* ======================================================= */
+                  /* ESTILOS INLINE AGRESSIVOS PARA FORÇAR A RENDERIZAÇÃO */
+                  /* ======================================================= */
+                  style="
+                    max-width: 180px !important; 
+                    max-height: 100px !important; 
+                    width: auto !important; 
+                    height: auto !important; 
+                    display: block !important; 
+                    margin: 0 auto 8px auto !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    min-width: 50px !important; /* Garante tamanho mínimo */
+                    min-height: 50px !important;
+                    /* Garante que a impressora renderize cores */
+                    -webkit-print-color-adjust: exact !important; 
+                    print-color-adjust: exact !important;
+                  "
+                  /* ======================================================= */
                 />
                 <div class="logo-text" style="font-size: 14pt; font-weight: bold;">CANTINHO DA BERE</div>
             </div>
@@ -30,7 +50,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
                 Obrigado pela preferência!
             </div>
         `;
-
+        
         // 2. Chama a impressão da janela principal
         window.print();
 
@@ -46,8 +66,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     }
   }, [htmlContent, onFinished]);
 
-  // Retorna a DIV escondida. O CSS de impressão irá mostrar esta DIV e esconder o resto da tela.
-  // A classe 'print-only' deve ser configurada no seu CSS para ser mostrada apenas na impressão.
+  // Retorna a DIV escondida que será mostrada apenas durante a impressão.
   return (
     <div 
       id="print-area-content" 
@@ -56,7 +75,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
         position: 'absolute', 
         top: '-9999px', 
         left: '-9999px',
-        width: '80mm', /* Adicionando a largura correta */
+        width: '80mm', /* Define a largura para a impressão */
         fontFamily: 'Courier New, monospace'
       }} 
     />
