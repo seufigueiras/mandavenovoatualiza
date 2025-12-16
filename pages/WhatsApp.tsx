@@ -43,7 +43,6 @@ const WhatsApp: React.FC = () => {
             fetchConversations();
             fetchBotStatus();
             
-            // Atualizar conversas a cada 5 segundos
             const interval = setInterval(() => {
                 fetchConversations();
                 if (selectedConversation) {
@@ -107,7 +106,6 @@ const WhatsApp: React.FC = () => {
 
         setMessages(data || []);
 
-        // Marcar como lida
         await supabase
             .from('whatsapp_conversations')
             .update({ unread_count: 0 })
@@ -125,14 +123,16 @@ const WhatsApp: React.FC = () => {
         setIsSending(true);
 
         try {
-            // 1. Enviar mensagem via Evolution API
             console.log('📤 Enviando mensagem via Evolution...');
+            console.log('📞 Phone do banco:', selectedConversation.phone);
+            
+            // ✅ CORREÇÃO: Usar o phone EXATAMENTE como está no banco
+            // Ele já vem no formato correto (@lid ou @s.whatsapp.net)
             await sendWhatsAppMessage({
                 phone: selectedConversation.phone,
                 message: messageText,
             });
 
-            // 2. Salvar mensagem no banco
             const { error: msgError } = await supabase
                 .from('whatsapp_messages')
                 .insert({
@@ -144,7 +144,6 @@ const WhatsApp: React.FC = () => {
 
             if (msgError) throw msgError;
 
-            // 3. Atualizar última mensagem da conversa
             await supabase
                 .from('whatsapp_conversations')
                 .update({
@@ -153,7 +152,6 @@ const WhatsApp: React.FC = () => {
                 })
                 .eq('id', selectedConversation.id);
 
-            // 4. Limpar input e atualizar UI
             setMessageText('');
             fetchMessages(selectedConversation.id);
             toast.success('✅ Mensagem enviada!');
@@ -227,6 +225,12 @@ const WhatsApp: React.FC = () => {
         }
     };
 
+    // ✅ Formatar telefone apenas para EXIBIÇÃO (não para envio)
+    const formatPhoneForDisplay = (phone: string) => {
+        // Remove @lid ou @s.whatsapp.net apenas para mostrar na tela
+        return phone.replace('@lid', '').replace('@s.whatsapp.net', '');
+    };
+
     return (
         <div className="h-[calc(100vh-120px)] flex flex-col">
             <div className="mb-4 flex items-center justify-between">
@@ -266,7 +270,6 @@ const WhatsApp: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
-                {/* Lista de Conversas */}
                 <Card className="col-span-1 flex flex-col overflow-hidden">
                     <CardHeader>
                         <CardTitle className="text-lg">Conversas ({conversations.length})</CardTitle>
@@ -295,7 +298,7 @@ const WhatsApp: React.FC = () => {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <h3 className="font-semibold text-sm truncate">
-                                                        {conv.contact_name || conv.phone}
+                                                        {conv.contact_name || formatPhoneForDisplay(conv.phone)}
                                                     </h3>
                                                     {conv.is_bot_paused && (
                                                         <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">
@@ -304,7 +307,7 @@ const WhatsApp: React.FC = () => {
                                                     )}
                                                 </div>
                                                 <p className="text-xs text-slate-500 mb-1">
-                                                    {conv.phone}
+                                                    {formatPhoneForDisplay(conv.phone)}
                                                 </p>
                                                 <p className="text-sm text-slate-600 truncate">
                                                     {conv.last_message}
@@ -328,7 +331,6 @@ const WhatsApp: React.FC = () => {
                     </CardContent>
                 </Card>
 
-                {/* Área de Mensagens */}
                 <Card className="col-span-2 flex flex-col overflow-hidden">
                     {selectedConversation ? (
                         <>
@@ -336,10 +338,10 @@ const WhatsApp: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <CardTitle className="text-lg">
-                                            {selectedConversation.contact_name || selectedConversation.phone}
+                                            {selectedConversation.contact_name || formatPhoneForDisplay(selectedConversation.phone)}
                                         </CardTitle>
                                         <p className="text-sm text-slate-500 mt-1">
-                                            {selectedConversation.phone}
+                                            {formatPhoneForDisplay(selectedConversation.phone)}
                                         </p>
                                     </div>
                                     <Button
