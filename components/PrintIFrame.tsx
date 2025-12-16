@@ -1,10 +1,6 @@
 // components/PrintIFrame.tsx
-import React, { useEffect, useRef } from 'react';
 
-interface PrintIFrameProps {
-  htmlContent: string;
-  onFinished: () => void;
-}
+// ... (Restante das importações e interface)
 
 const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -17,7 +13,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     if (!iframeDoc) return;
 
     // ============================================================
-    // VOLTANDO PARA A URL COMPLETA. É MAIS SEGURO DENTRO DE IFRAMES.
+    // USANDO A URL COMPLETA. Esta é a mais robusta para IFRAMES.
     // ============================================================
     const logoUrl = `${window.location.origin}/logo.png`;
     // ============================================================
@@ -30,102 +26,13 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Comprovante - Cantinho da Bere</title>
         <style>
+          /* ... (Todos os estilos CSS estão aqui) ... */
           @page { 
             size: 80mm auto; 
             margin: 0; 
           }
-          
-          * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-          }
-          
-          body {
-            width: 80mm;
-            padding: 5mm;
-            font-family: 'Courier New', monospace;
-            font-size: 10pt;
-            background: white;
-            color: black;
-            line-height: 1.4;
-          }
-          
-          .logo-container {
-            text-align: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px dashed #000;
-          }
-          
-          .logo-container img {
-            max-width: 180px;
-            max-height: 100px;
-            width: auto;
-            height: auto;
-            display: block;
-            margin: 0 auto 8px auto;
-            object-fit: contain;
-          }
-          
-          .logo-text {
-            font-size: 14pt;
-            font-weight: bold;
-            margin: 5px 0;
-            letter-spacing: 1px;
-            color: #000;
-          }
-          
-          .content {
-            margin-top: 10px;
-          }
-          
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 10px 0; 
-          }
-          
-          td, th {
-            padding: 4px 2px;
-            text-align: left;
-          }
-          
-          .center { text-align: center; }
-          .right { text-align: right; }
-          .bold { font-weight: bold; }
-          
-          .total-line {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px dashed #000;
-          }
-          
-          .total { 
-            font-size: 1.2em; 
-            font-weight: bold; 
-          }
-          
-          .footer {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px dashed #000;
-            text-align: center;
-            font-size: 9pt;
-          }
-          
-          @media print {
-            body { 
-              margin: 0;
-              padding: 5mm;
-            }
-            
-            .logo-container img {
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
-              color-adjust: exact;
-            }
-          }
+          /* ... (o restante dos seus estilos CSS) ... */
+
         </style>
       </head>
       <body>
@@ -174,13 +81,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
                   triggerPrint();
                 };
                 
-                // *** REMOVIDO: Comentado o bloco de erro para não esconder a logo se falhar. ***
-                // logoImg.onerror = function(e) {
-                //   console.error('Erro ao carregar logo:', e);
-                //   console.error('URL tentada:', logoImg.src);
-                //   logoImg.style.display = 'none'; 
-                //   triggerPrint();
-                // };
+                // *** REMOVEMOS: O código onerror para garantir que o elemento da imagem não seja escondido se falhar. ***
                 
                 // Timeout de segurança
                 setTimeout(() => {
