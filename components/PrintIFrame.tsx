@@ -1,27 +1,25 @@
 // components/PrintIFrame.tsx
 
-// MUDANÇA: SINTAXE DE IMPORTAÇÃO ANTIGA PARA EVITAR CONFLITOS DE AMBIENTE
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface PrintIFrameProps {
   htmlContent: string; 
   onFinished: () => void;
 }
 
-// Retornando à sintaxe React.FC
+// Retornando à sintaxe React.FC para máxima compatibilidade no deploy
 const PrintIFrame: React.FC<PrintIFrameProps> = (props) => { 
-  const { htmlContent, onFinished } = props;
+  const { htmlContent, onFinished } = props; 
 
-  // Usando a sintaxe antiga para useRef e useEffect
-  const printAreaRef = React.useRef<HTMLDivElement>(null);
+  const printAreaRef = useRef<HTMLDivElement>(null);
   
-  React.useEffect(() => {
+  useEffect(() => {
     
     const printArea = printAreaRef.current;
     
     if (printArea) {
         
-        // **INJEÇÃO HTML COM ESTILOS INLINE AGRESSIVOS**
+        // **INJEÇÃO HTML COM ESTILOS INLINE AGRESSIVOS PARA A LOGO**
         printArea.innerHTML = `
             <div style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px dashed #000;">
                 <img 
@@ -46,24 +44,17 @@ const PrintIFrame: React.FC<PrintIFrameProps> = (props) => {
                 <div style="font-size: 14pt; font-weight: bold;">CANTINHO DA BERE</div>
             </div>
             ${htmlContent}
-            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; text-align: center; font-size: 9pt;">
+            <div class="footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; text-align: center; font-size: 9pt;">
                 Obrigado pela preferência!
             </div>
         `;
         
         window.print();
 
-        React.useTimeout(() => { // MUDANÇA: Usando React.useTimeout se o seu ambiente for antigo
+        setTimeout(() => {
             printArea.innerHTML = '';
             onFinished();
         }, 500); 
-        
-        // Se a linha acima der erro, use o setTimeout comum:
-        // setTimeout(() => {
-        //     printArea.innerHTML = '';
-        //     onFinished();
-        // }, 500);
-        
     }
   }, [htmlContent, onFinished]);
 
@@ -77,7 +68,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = (props) => {
         position: 'absolute', 
         top: '-9999px', 
         left: '-9999px',
-        width: '80mm',
+        // O tamanho será ajustado pelo CSS externo (print.css)
         fontFamily: 'Courier New, monospace'
       }} 
     />

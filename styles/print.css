@@ -1,15 +1,50 @@
 @media print {
-    /* Esconde tudo que não é impressão */
-    .screen-only { 
-        display: none !important; 
+    /* 1. CONFIGURAÇÕES DA PÁGINA DE RECIBO (80mm) */
+    @page { 
+        size: 80mm auto; /* Define a largura da página para 80mm */
+        margin: 0;      /* Remove margens padrão do navegador */
     }
 
-    /* Mostra a área do comprovante */
+    /* 2. REGRAS GLOBAIS DE VISIBILIDADE */
+
+    /* Esconde a aplicação inteira (tudo que NÃO for .print-only) */
+    body > *:not(.print-only) { 
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Garante que o body esteja visível para renderizar o recibo */
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: #fff !important;
+    }
+
+    /* 3. REGRAS DO RECIBO (.print-only) */
+
+    /* Torna o container de impressão visível e ajusta o tamanho */
     .print-only {
         display: block !important;
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        /* Outras regras de tamanho e fonte */
+        visibility: visible !important;
+        width: 80mm !important; /* Força a largura para 80mm */
+        position: static !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* 4. REGRAS PARA IMAGEM E COR */
+    
+    /* Garante que imagens e cores sejam impressas */
+    img {
+        display: block !important; 
+        visibility: visible !important;
+        print-color-adjust: exact !important; 
+        -webkit-print-color-adjust: exact !important;
+    }
+
+    /* Se você tinha a classe .no-print, ela é redundante, mas pode ser adicionada: */
+    .no-print {
+        display: none !important;
+        visibility: hidden !important;
     }
 }
