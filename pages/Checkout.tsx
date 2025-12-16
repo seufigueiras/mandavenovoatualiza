@@ -1,4 +1,4 @@
-// mandavenovo/pages/Checkout.tsx - CÓDIGO FINAL E CORRIGIDO (v7)
+// mandavenovo/pages/Checkout.tsx - VERSÃO CORRIGIDA COM TAXA VISÍVEL
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -20,23 +20,24 @@ interface FormData {
     paymentMethod: string;
 }
 
-// 🟢 ATUALIZADO: Função de formatação agora recebe o nome do restaurante
-const formatWhatsappMessage = (orderId: string, formData: FormData, items: any[], total: number, restaurantName: string): string => {
-    
-    // Garantia de String
+// Função de formatação do WhatsApp
+const formatWhatsappMessage = (orderId: string, formData: FormData, items: any[], subtotal: number, taxa: number, total: number, restaurantName: string): string => {
     const safeOrderId = String(orderId || '').substring(0, 8);
-    
     const addressLine = formData.orderType === 'DELIVERY' ? `\n*Endereço:* ${formData.customerAddress}` : '';
-    
     const orderItems = items.map(item => ` - *${item.quantity}x* ${item.name} (R$ ${item.price.toFixed(2)})`).join('\n');
     
-    // 🟢 USANDO o nome real do restaurante
     let message = `*NOVO PEDIDO #${safeOrderId} - ${restaurantName}*\n\n`;
     message += `*CLIENTE:* ${formData.customerName}\n`;
     message += `*TELEFONE:* ${formData.customerPhone}\n`;
     message += `*Tipo de Serviço:* ${formData.orderType === 'DELIVERY' ? 'ENTREGA 🛵' : 'RETIRADA 📦'}${addressLine}\n`;
     message += `*Pagamento:* ${formData.paymentMethod}\n\n`;
     message += `--- ITENS DO PEDIDO ---\n${orderItems}\n\n`;
+    message += `*Subtotal:* R$ ${subtotal.toFixed(2)}\n`;
+    
+    if (formData.orderType === 'DELIVERY' && taxa > 0) {
+        message += `*Taxa de Entrega:* R$ ${taxa.toFixed(2)}\n`;
+    }
+    
     message += `*TOTAL: R$ ${total.toFixed(2)}*`;
 
     return encodeURIComponent(message);
@@ -58,25 +59,35 @@ const Checkout: React.FC = () => {
     const [orderPlaced, setOrderPlaced] = useState(false);
     const [newOrderId, setNewOrderId] = useState('');
     const [restaurantPhone, setRestaurantPhone] = useState(''); 
-    // 🟢 NOVO ESTADO: Para guardar o nome do restaurante
-    const [restaurantName, setRestaurantName] = useState('Seu Restaurante'); 
+    const [restaurantName, setRestaurantName] = useState('Seu Restaurante');
+    // 🆕 NOVO ESTADO: Taxa de entrega
+    const [deliveryFee, setDeliveryFee] = useState(0);
     const [finalOrderDetails, setFinalOrderDetails] = useState<any>(null); 
 
-    // 🟢 ATUALIZADO: Busca o telefone E o nome do restaurante
-    const fetchRestaurantPhone = async () => {
-        const { data } = await supabase.from('restaurants').select('phone, name').eq('id', restaurantId).single();
+    // 🆕 CALCULAR SUBTOTAL E TOTAL COM TAXA
+    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const taxaAplicada = formData.orderType === 'DELIVERY' ? deliveryFee : 0;
+    const totalComTaxa = subtotal + taxaAplicada;
+
+    // Busca dados do restaurante incluindo a taxa
+    const fetchRestaurantData = async () => {
+        const { data } = await supabase
+            .from('restaurants')
+            .select('phone, name, delivery_fee')
+            .eq('id', restaurantId)
+            .single();
+        
         if (data) {
             setRestaurantPhone(data.phone || '');
-            // 🟢 Armazena o nome
-            setRestaurantName(data.name || 'Seu Restaurante'); 
+            setRestaurantName(data.name || 'Seu Restaurante');
+            setDeliveryFee(data.delivery_fee || 0);
         }
     };
     
     useEffect(() => {
         if (restaurantId) {
-            fetchRestaurantPhone();
+            fetchRestaurantData();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [restaurantId]); 
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -92,9 +103,6 @@ const Checkout: React.FC = () => {
         }));
     };
 
-    // ----------------------------------------------------
-    // SUBMISSÃO DO PEDIDO
-    // ----------------------------------------------------
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -127,7 +135,7 @@ const Checkout: React.FC = () => {
                 p_customer_phone: formData.customerPhone,
                 p_customer_address: formData.customerAddress || null,
                 p_order_type: formData.orderType,
-                p_total_amount: total,
+                p_total_amount: totalComTaxa, // 🆕 USANDO O TOTAL COM TAXA
                 p_payment_method: formData.paymentMethod,
                 p_items: orderItemsForRPC,
                 p_origin: 'CARDAPIO'
@@ -135,7 +143,6 @@ const Checkout: React.FC = () => {
 
             if (error) throw new Error(error.message);
 
-            // Extrai o ID da resposta do RPC de forma robusta
             let orderId = data;
             
             if (Array.isArray(data) && data.length > 0) {
@@ -148,14 +155,18 @@ const Checkout: React.FC = () => {
 
             setNewOrderId(String(orderId));
             
-            // Salva os detalhes completos do pedido
-            setFinalOrderDetails({ items, total, formData });
+            // 🆕 Salva os detalhes incluindo subtotal e taxa
+            setFinalOrderDetails({ 
+                items, 
+                subtotal, 
+                taxa: taxaAplicada, 
+                total: totalComTaxa, 
+                formData 
+            });
 
-            // Atribui a flag de sucesso
             setOrderPlaced(true);
             toast.success("Pedido enviado com sucesso!");
 
-            // Limpa o carrinho SÓ AGORA
             clearCart(); 
             
         } catch (error) {
@@ -166,22 +177,19 @@ const Checkout: React.FC = () => {
         }
     };
 
-    // ----------------------------------------------------
-    // TELAS DE SUCESSO / CARRINHO VAZIO
-    // ----------------------------------------------------
     if (orderPlaced) {
-        
         if (!finalOrderDetails) {
              return <div className="p-8 max-w-lg mx-auto mt-10">Carregando detalhes finais do pedido...</div>;
         }
         
-        // 🟢 ATUALIZADO: Passando o nome do restaurante
         const whatsappMessage = formatWhatsappMessage(
             newOrderId, 
             finalOrderDetails.formData, 
             finalOrderDetails.items, 
+            finalOrderDetails.subtotal,
+            finalOrderDetails.taxa,
             finalOrderDetails.total,
-            restaurantName // 🟢 NOVO ARGUMENTO
+            restaurantName
         );
 
         return (
@@ -227,9 +235,6 @@ const Checkout: React.FC = () => {
         );
     }
 
-    // ----------------------------------------------------
-    // FORMULÁRIO DE CHECKOUT
-    // ----------------------------------------------------
     return (
         <div className="p-4 md:p-8 max-w-4xl mx-auto min-h-screen">
             <h1 className="text-3xl font-bold text-indigo-600 border-b pb-2 mb-6">Finalizar Pedido</h1>
@@ -250,9 +255,24 @@ const Checkout: React.FC = () => {
                         </div>
                     ))}
 
-                    <div className="pt-4 flex justify-between items-center text-2xl font-bold text-slate-900 border-t mt-4">
-                        <span>Total:</span>
-                        <span>R$ {total.toFixed(2)}</span>
+                    {/* 🆕 MOSTRANDO SUBTOTAL, TAXA E TOTAL */}
+                    <div className="pt-4 border-t mt-4 space-y-2">
+                        <div className="flex justify-between items-center text-lg text-slate-700">
+                            <span>Subtotal:</span>
+                            <span>R$ {subtotal.toFixed(2)}</span>
+                        </div>
+                        
+                        {formData.orderType === 'DELIVERY' && deliveryFee > 0 && (
+                            <div className="flex justify-between items-center text-lg text-slate-700">
+                                <span>Taxa de Entrega:</span>
+                                <span>R$ {taxaAplicada.toFixed(2)}</span>
+                            </div>
+                        )}
+                        
+                        <div className="flex justify-between items-center text-2xl font-bold text-slate-900 border-t pt-2">
+                            <span>Total:</span>
+                            <span>R$ {totalComTaxa.toFixed(2)}</span>
+                        </div>
                     </div>
 
                     <Button
@@ -277,7 +297,7 @@ const Checkout: React.FC = () => {
                                 onClick={() => handleOrderTypeChange('PICKUP')}
                                 className={formData.orderType === 'PICKUP' ? 'bg-indigo-600' : 'bg-gray-200 text-slate-700 hover:bg-gray-300'}
                             >
-                                <Package size={16} className="mr-2" /> Retirada (Balcão)
+                                <Package size={16} className="mr-2" /> Retirada
                             </Button>
                             <Button
                                 type="button"

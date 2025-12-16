@@ -77,7 +77,6 @@ const Orders: React.FC = () => {
             if (payload.eventType === 'INSERT') {
                 const newOrderData = payload.new as Order;
                 
-                // 🔍 LOGS DE DEBUG
                 console.log('🆕 NOVO PEDIDO DETECTADO!');
                 console.log('📦 Dados do pedido:', newOrderData);
                 console.log('📊 Status:', newOrderData.status);
@@ -92,7 +91,6 @@ const Orders: React.FC = () => {
                 console.log('✅ Status Upper:', statusUpper);
                 console.log('✅ Origin Lower:', originLower);
                 
-                // CORREÇÃO: Incluindo 'whatsapp' para tocar o alerta de novo pedido
                 if (statusUpper === 'PENDING' && (originLower === 'cardapio' || originLower === 'whatsapp')) {
                     console.log('🔔 TENTANDO TOCAR O SOM!');
                     playNewOrderAlert();
@@ -129,7 +127,6 @@ const Orders: React.FC = () => {
             toast.success(`Status: ${statusUpperCase}`);
             setOrders(prev => prev.map(o => o.id === orderId ? {...o, status: statusUpperCase} : o));
             
-            // Para o alerta se o pedido foi aceito
             if (statusUpperCase === 'ACCEPTED') {
                 stopAlert();
             }
@@ -226,7 +223,16 @@ const Orders: React.FC = () => {
         }));
     };
 
-    const handlePrint = (order: Order) => {
+    // 🆕 FUNÇÃO CORRIGIDA - USA O TOTAL DO BANCO E MOSTRA A TAXA SEPARADA
+    const handlePrint = async (order: Order) => {
+        // Buscar a taxa de entrega do banco
+        const { data: restaurantData } = await supabase
+            .from('restaurants')
+            .select('delivery_fee')
+            .eq('id', restaurantId)
+            .single();
+        
+        const deliveryFee = restaurantData?.delivery_fee || 0;
         const deliveryAddress = order.delivery_address || '';
         const hasAddress = !!order.delivery_address;
 
@@ -235,7 +241,14 @@ const Orders: React.FC = () => {
             return `<tr><td style="width:10%; text-align:center;">${item.quantity}x</td><td>${item.name}</td><td style="width:25%; text-align:right;">R$ ${subtotal}</td></tr>`;
         }).join('');
 
+        // 🔥 USAR O TOTAL QUE JÁ ESTÁ SALVO NO BANCO (não recalcular!)
         const totalValue = order.total ? order.total.toFixed(2) : 'N/A';
+        
+        // 🔥 CALCULAR O SUBTOTAL (itens sem taxa)
+        const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        // 🔥 SE TEM ENDEREÇO, MOSTRAR A TAXA (que é a diferença entre total e subtotal)
+        const taxaAplicada = hasAddress ? (order.total - subtotal) : 0;
         
         let paymentDisplay = 'NÃO INFORMADO';
         if (order.payment_method) {
@@ -251,6 +264,18 @@ const Orders: React.FC = () => {
         const orderIdStr = order.id.toString().substring(0, 8);
         const dateStr = new Date(order.created_at).toLocaleString('pt-BR');
         const customerName = order.customer_name || 'BALCÃO';
+
+        // 🔥 SEÇÃO DA TAXA (só mostra se tiver entrega E a taxa for maior que 0)
+        const taxaSection = hasAddress && taxaAplicada > 0 ? `
+            <tr style="border-top: 1px dashed #333;">
+                <td colspan="2" style="text-align: right; padding-top: 8px; font-weight: bold;">Subtotal:</td>
+                <td style="text-align: right; padding-top: 8px; font-weight: bold;">R$ ${subtotal.toFixed(2)}</td>
+            </tr>
+            <tr>
+                <td colspan="2" style="text-align: right; padding-top: 4px; font-weight: bold;">Taxa de Entrega:</td>
+                <td style="text-align: right; padding-top: 4px; font-weight: bold;">R$ ${taxaAplicada.toFixed(2)}</td>
+            </tr>
+        ` : '';
 
         const htmlContent = `<!DOCTYPE html>
 <html>
@@ -289,10 +314,13 @@ const Orders: React.FC = () => {
                 <td style="width:25%; text-align: right;">Valor</td>
             </tr>
         </thead>
-        <tbody>${itemsHtml}</tbody>
+        <tbody>
+            ${itemsHtml}
+            ${taxaSection}
+        </tbody>
     </table>
     
-    <div style="border-top: 1px dashed #333; margin-top: 10px; padding-top: 10px; text-align: right;" class="total">
+    <div style="border-top: 2px solid #333; margin-top: 10px; padding-top: 10px; text-align: right;" class="total">
         TOTAL: R$ ${totalValue}
     </div>
     <div class="center" style="margin-top: 15px; font-size: 0.8em;">
