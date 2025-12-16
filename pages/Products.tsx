@@ -1,3 +1,4 @@
+// ====== imports iguais ======
 import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -7,6 +8,7 @@ import { supabase } from '../services/supabaseClient';
 import toast from 'react-hot-toast';
 import { Plus, UtensilsCrossed, Trash2, Edit, Save, X, Upload } from 'lucide-react';
 
+// ====== types ======
 type Product = {
   id: string;
   category: string;
@@ -30,10 +32,9 @@ const Products: React.FC = () => {
   const [groupedProducts, setGroupedProducts] = useState<GroupedProducts>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
-
   const [isUploading, setIsUploading] = useState(false);
 
-  // ADD
+  // ====== ADD ======
   const [newProductName, setNewProductName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -42,7 +43,7 @@ const Products: React.FC = () => {
   const [newImagePreview, setNewImagePreview] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  // EDIT
+  // ====== EDIT ======
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<Product>>({});
   const [editImagePreview, setEditImagePreview] = useState('');
@@ -52,20 +53,11 @@ const Products: React.FC = () => {
     if (restaurantId) fetchProductsAndGroup();
   }, [restaurantId]);
 
+  // ====== upload ======
   const handleImageUpload = async (file: File): Promise<string | null> => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Arquivo inválido');
-      return null;
-    }
-
     const fileName = `${restaurantId}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('produtos').upload(fileName, file);
-
-    if (error) {
-      toast.error(error.message);
-      return null;
-    }
-
+    if (error) return null;
     return supabase.storage.from('produtos').getPublicUrl(fileName).data.publicUrl;
   };
 
@@ -75,48 +67,49 @@ const Products: React.FC = () => {
 
     setIsUploading(true);
     setNewImagePreview(URL.createObjectURL(file));
-
     const url = await handleImageUpload(file);
     if (url) setNewImageUrl(url);
-
     setIsUploading(false);
   };
 
+  const handleEditFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setEditImagePreview(URL.createObjectURL(file));
+    const url = await handleImageUpload(file);
+    if (url) setEditData({ ...editData, image_url: url });
+    setIsUploading(false);
+  };
+
+  // ====== fetch ======
   const fetchProductsAndGroup = async () => {
     setLoading(true);
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('products')
       .select('*')
       .eq('restaurant_id', restaurantId)
       .order('category')
       .order('name');
 
-    if (error) {
-      toast.error('Erro ao carregar produtos');
-      setGroupedProducts({});
-    } else {
-      const grouped = data.reduce((acc: GroupedProducts, p: Product) => {
+    if (data) {
+      const groups = data.reduce((acc: GroupedProducts, p) => {
         const cat = p.category || 'Sem Categoria';
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(p);
         return acc;
       }, {});
-      setGroupedProducts(grouped);
+      setGroupedProducts(groups);
     }
-
     setLoading(false);
   };
 
+  // ====== add ======
   const handleAddProduct = async () => {
-    if (!newProductName || !newPrice || !newCategory) {
-      toast.error('Preencha os campos obrigatórios');
-      return;
-    }
-
     setIsAdding(true);
 
-    const { error } = await supabase.from('products').insert([{
+    await supabase.from('products').insert([{
       restaurant_id: restaurantId,
       name: newProductName,
       description: newDescription || null,
@@ -127,20 +120,29 @@ const Products: React.FC = () => {
       is_visible: true,
     }]);
 
-    if (!error) {
-      toast.success('Produto criado');
-      setNewProductName('');
-      setNewDescription('');
-      setNewPrice('');
-      setNewCategory('');
-      setNewImageUrl('');
-      setNewImagePreview('');
-      fetchProductsAndGroup();
-    } else {
-      toast.error(error.message);
-    }
-
+    setNewProductName('');
+    setNewDescription('');
+    setNewPrice('');
+    setNewCategory('');
+    setNewImageUrl('');
+    setNewImagePreview('');
+    fetchProductsAndGroup();
     setIsAdding(false);
+  };
+
+  const startEditing = (p: Product) => {
+    setEditingProductId(p.id);
+    setEditData(p);
+    setEditImagePreview(p.image_url || '');
+  };
+
+  const handleUpdateProduct = async () => {
+    await supabase.from('products')
+      .update(editData)
+      .eq('id', editingProductId);
+
+    setEditingProductId(null);
+    fetchProductsAndGroup();
   };
 
   const categories = Object.keys(groupedProducts);
@@ -148,14 +150,14 @@ const Products: React.FC = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">
-        <UtensilsCrossed className="inline mr-2 text-indigo-600" />
-        Gestão do Cardápio
+        <UtensilsCrossed className="inline mr-2" /> Gestão do Cardápio
       </h1>
 
+      {/* ADD */}
       <Card className="p-4">
-        <CardTitle className="mb-4">Adicionar Produto</CardTitle>
+        <CardTitle>Adicionar Produto</CardTitle>
 
-        <div className="grid md:grid-cols-4 gap-3">
+        <div className="grid md:grid-cols-4 gap-3 mt-3">
           <Input placeholder="Nome" value={newProductName} onChange={e => setNewProductName(e.target.value)} />
           <Input placeholder="Preço" type="number" value={newPrice} onChange={e => setNewPrice(e.target.value)} />
           <Input placeholder="Categoria" value={newCategory} onChange={e => setNewCategory(e.target.value)} />
@@ -166,6 +168,7 @@ const Products: React.FC = () => {
           </label>
         </div>
 
+        {/* 🔹 DESCRIÇÃO */}
         <Input
           className="mt-3"
           placeholder="Descrição do produto (o que vem no item)"
@@ -173,32 +176,32 @@ const Products: React.FC = () => {
           onChange={e => setNewDescription(e.target.value)}
         />
 
-        {newImagePreview && (
-          <img src={newImagePreview} className="w-24 h-24 mt-3 rounded object-cover" />
-        )}
-
-        <Button className="mt-4 w-full" onClick={handleAddProduct} isLoading={isAdding}>
+        <Button className="mt-4 w-full" onClick={handleAddProduct}>
           <Plus size={16} /> Salvar Produto
         </Button>
       </Card>
 
+      {/* LIST */}
       {categories.map(cat => (
         <Card key={cat}>
           <CardHeader><CardTitle>{cat}</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent>
             {groupedProducts[cat].map(p => (
-              <div key={p.id} className="p-3 border rounded flex justify-between">
-                <div className="flex gap-3">
-                  {p.image_url && <img src={p.image_url} className="w-12 h-12 rounded object-cover" />}
-                  <div>
-                    <strong>{p.name}</strong>
-                    {p.description && (
-                      <p className="text-sm text-gray-600">{p.description}</p>
-                    )}
-                    <p className="text-xs text-gray-400">{p.category}</p>
-                  </div>
+              <div key={p.id} className="flex justify-between p-3 border rounded mb-2">
+                <div>
+                  <strong>{p.name}</strong>
+                  {p.description && (
+                    <p className="text-sm text-gray-500">{p.description}</p>
+                  )}
                 </div>
-                <span className="font-bold text-green-600">R$ {p.price.toFixed(2)}</span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => startEditing(p)}>
+                    <Edit size={16} />
+                  </Button>
+                  <Button size="sm" variant="ghost">
+                    <Trash2 size={16} className="text-red-500" />
+                  </Button>
+                </div>
               </div>
             ))}
           </CardContent>
