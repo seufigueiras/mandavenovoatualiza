@@ -63,7 +63,12 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
       <body>
         <!-- 🖼️ LOGO NO TOPO -->
         <div class="logo-container">
-          <img src="https://mandavenovoatualiza.vercel.app/logo.png" alt="Logo" />
+          <img 
+            src="/logo.png" 
+            alt="Logo" 
+            id="receiptLogo"
+            onerror="this.style.display='none'"
+          />
         </div>
         
         <!-- CONTEÚDO DO TICKET -->
@@ -76,25 +81,62 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     iframeDoc.write(printHtml);
     iframeDoc.close();
 
-    // 3. Dispara a Impressão e Limpa
+    // 3. AGUARDA A LOGO CARREGAR ANTES DE IMPRIMIR
     const printWindow = iframe.contentWindow;
     
-    const printAndCleanup = () => {
-      printWindow?.focus();
-      printWindow?.print();
-      onFinished();
+    const waitForImageAndPrint = () => {
+      if (!printWindow) return;
+
+      const logoImg = iframeDoc.getElementById('receiptLogo') as HTMLImageElement;
+      
+      if (logoImg) {
+        // Se a imagem já carregou
+        if (logoImg.complete && logoImg.naturalHeight !== 0) {
+          console.log('✅ Logo carregada com sucesso!');
+          printWindow.focus();
+          printWindow.print();
+          onFinished();
+        } else {
+          // Aguarda o carregamento da imagem
+          logoImg.onload = () => {
+            console.log('✅ Logo carregada após espera!');
+            printWindow.focus();
+            printWindow.print();
+            onFinished();
+          };
+          
+          // Se a imagem falhar, imprime sem ela
+          logoImg.onerror = () => {
+            console.warn('⚠️ Erro ao carregar logo, imprimindo sem ela...');
+            printWindow.focus();
+            printWindow.print();
+            onFinished();
+          };
+          
+          // Timeout de segurança (3 segundos)
+          setTimeout(() => {
+            console.log('⏱️ Timeout atingido, imprimindo...');
+            printWindow.focus();
+            printWindow.print();
+            onFinished();
+          }, 3000);
+        }
+      } else {
+        // Se não encontrou a imagem, imprime normalmente
+        printWindow.focus();
+        printWindow.print();
+        onFinished();
+      }
     };
 
-    // Tenta garantir que o conteúdo esteja carregado antes de imprimir
-    iframe.onload = printAndCleanup;
-    
-    // Tempo de espera para o conteúdo carregar (1 segundo)
-    setTimeout(printAndCleanup, 1000);
+    // Aguarda o iframe carregar completamente
+    iframe.onload = () => {
+      setTimeout(waitForImageAndPrint, 500);
+    };
 
   }, [htmlContent, onFinished]);
 
   return (
-    // O iFrame é completamente escondido na tela principal
     <iframe
       ref={iframeRef}
       style={{ display: 'none', position: 'absolute' }}
