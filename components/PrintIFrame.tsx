@@ -1,185 +1,64 @@
 // components/PrintIFrame.tsx
-import React, { useEffect, useRef } from 'react';
+
+import React, { useEffect } from 'react';
 
 interface PrintIFrameProps {
-  htmlContent: string;
+  htmlContent: string; 
   onFinished: () => void;
 }
 
 const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) => {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
 
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) return;
+    const printArea = document.getElementById('print-area-content');
 
-    // ============================================================
-    // USANDO A URL COMPLETA (Confirmado que funciona no servidor)
-    // ============================================================
-    const logoUrl = `${window.location.origin}/logo.png`;
-    // ============================================================
+    // Se o componente for renderizado, injeta o HTML e imprime a página principal
+    if (printArea) {
+        // 1. Injeta o HTML do comprovante (com a logo normal) no elemento escondido
+        printArea.innerHTML = `
+            <div class="logo-container" style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px dashed #000;">
+                <img 
+                  src="/logo.png" 
+                  alt="Logo Cantinho da Bere"
+                  style="max-width: 180px; max-height: 100px; display: block; margin: 0 auto 8px auto;"
+                />
+                <div class="logo-text" style="font-size: 14pt; font-weight: bold;">CANTINHO DA BERE</div>
+            </div>
+            ${htmlContent}
+            <div class="footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; text-align: center; font-size: 9pt;">
+                Obrigado pela preferência!
+            </div>
+        `;
 
-    const printHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Comprovante - Cantinho da Bere</title>
-        <style>
-          @page { 
-            size: 80mm auto; 
-            margin: 0; 
-          }
-          
-          * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-          }
-          
-          body {
-            width: 80mm;
-            padding: 5mm;
-            font-family: 'Courier New', monospace;
-            font-size: 10pt;
-            background: white;
-            color: black;
-            line-height: 1.4;
-          }
-          
-          /* O logo-container foi removido do topo */
-          
-          .logo-footer { /* NOVO ESTILO */
-            text-align: center;
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px dashed #000;
-          }
-          
-          .logo-footer img { /* NOVO ESTILO */
-            max-width: 180px;
-            max-height: 100px;
-            width: auto;
-            height: auto;
-            display: block;
-            margin: 0 auto 8px auto;
-            object-fit: contain;
-          }
-          
-          .logo-text {
-            font-size: 14pt;
-            font-weight: bold;
-            margin: 5px 0;
-            letter-spacing: 1px;
-            color: #000;
-          }
-          
-          .content {
-            margin-top: 10px;
-          }
-          
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 10px 0; 
-          }
-          
-          td, th {
-            padding: 4px 2px;
-            text-align: left;
-          }
-          
-          .center { text-align: center; }
-          .right { text-align: right; }
-          .bold { font-weight: bold; }
-          
-          .total-line {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px dashed #000;
-          }
-          
-          .total { 
-            font-size: 1.2em; 
-            font-weight: bold; 
-          }
-          
-          .footer {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px dashed #000;
-            text-align: center;
-            font-size: 9pt;
-          }
-          
-          @media print {
-            body { 
-              margin: 0;
-              padding: 5mm;
-            }
-            
-            .logo-footer img {
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
-              color-adjust: exact;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        
-        <div class="content">
-          ${htmlContent}
-        </div>
-        
-        <div class="logo-footer">
-          <img 
-            id="logo" 
-            src="${logoUrl}" 
-            alt="Logo Cantinho da Bere"
-          />
-          <div class="logo-text">CANTINHO DA BERE</div>
-        </div>
-        
-        <script>
-          // O script de onload e triggerPrint foi simplificado, pois o problema de carregamento já foi resolvido.
-          (function() {
-            setTimeout(() => {
-              try {
-                window.print();
-              } catch (e) {
-                console.error('Erro ao imprimir:', e);
-              }
-            }, 800); // Dá um tempo para o navegador renderizar
-          })();
-        </script>
-      </body>
-      </html>
-    `;
+        // 2. Chama a impressão da janela principal
+        window.print();
 
-    iframeDoc.open();
-    iframeDoc.write(printHtml);
-    iframeDoc.close();
-
+        // 3. Limpa a área e finaliza
+        // O timeout garante que a impressão seja iniciada antes de remover o conteúdo
+        setTimeout(() => {
+            printArea.innerHTML = '';
+            onFinished();
+        }, 500); 
+    } else {
+        console.error("Elemento #print-area-content não encontrado.");
+        onFinished();
+    }
   }, [htmlContent, onFinished]);
 
+  // Retorna a DIV escondida. O CSS de impressão irá mostrar esta DIV e esconder o resto da tela.
+  // A classe 'print-only' deve ser configurada no seu CSS para ser mostrada apenas na impressão.
   return (
-    <iframe
-      ref={iframeRef}
+    <div 
+      id="print-area-content" 
+      className="print-only" 
       style={{ 
-        display: 'none', 
         position: 'absolute', 
+        top: '-9999px', 
         left: '-9999px',
-        top: '-9999px',
-        width: '80mm',
-        height: '100%',
-        border: 'none'
-      }}
-      title="Print Area"
+        width: '80mm', /* Adicionando a largura correta */
+        fontFamily: 'Courier New, monospace'
+      }} 
     />
   );
 };
