@@ -2,7 +2,7 @@
 
 const EVOLUTION_API_URL = 'https://cantinhodabere-evolution-api.3xdxtv.easypanel.host';
 const API_KEY = '429683C4C977415CAAFCCE10F7D57E11';
-const INSTANCE_NAME = 'cantinho'; // ✅ CORRIGIDO DE 'testa' PARA 'cantinho'
+const INSTANCE_NAME = 'cantinho';
 
 interface EvolutionResponse {
   instance?: {
@@ -24,7 +24,6 @@ interface SendMessageParams {
   message: string;
 }
 
-// Headers padrão para todas as requisições
 const getHeaders = () => ({
   'Content-Type': 'application/json',
   'apikey': API_KEY,
@@ -39,11 +38,17 @@ export const sendWhatsAppMessage = async ({ phone, message }: SendMessageParams)
     console.log('📱 Para:', phone);
     console.log('💬 Mensagem:', message);
 
-    // Formatar o número corretamente (remover caracteres especiais)
-    const cleanPhone = phone.replace(/\D/g, '');
-    const formattedPhone = cleanPhone.includes('@s.whatsapp.net') 
-      ? cleanPhone 
-      : `${cleanPhone}@s.whatsapp.net`;
+    // ✅ CORREÇÃO: Verificar se já tem @s.whatsapp.net ou @lid ANTES de limpar
+    let formattedPhone = phone;
+    
+    if (!phone.includes('@')) {
+      // Se não tem @, é só o número - limpa e adiciona @s.whatsapp.net
+      const cleanPhone = phone.replace(/\D/g, '');
+      formattedPhone = `${cleanPhone}@s.whatsapp.net`;
+    }
+    // Se já tem @, mantém como está (pode ser @lid ou @s.whatsapp.net)
+
+    console.log('📞 Número formatado:', formattedPhone);
 
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`, {
       method: 'POST',
@@ -85,7 +90,6 @@ export const checkConnectionStatus = async (instanceName: string): Promise<strin
 
     const data: EvolutionResponse = await response.json();
     
-    // Estados possíveis: 'open', 'close', 'connecting'
     if (data.instance?.state === 'open' || data.state === 'open') return 'connected';
     if (data.instance?.state === 'connecting' || data.state === 'connecting') return 'connecting';
     return 'disconnected';
@@ -100,7 +104,6 @@ export const checkConnectionStatus = async (instanceName: string): Promise<strin
  */
 export const createInstanceAndGenerateQR = async (instanceName: string): Promise<{ success: boolean; qrCode?: string; error?: string }> => {
   try {
-    // 1. Criar a instância
     const createResponse = await fetch(
       `${EVOLUTION_API_URL}/instance/create`,
       {
@@ -121,7 +124,6 @@ export const createInstanceAndGenerateQR = async (instanceName: string): Promise
 
     const createData = await createResponse.json();
 
-    // 2. Verificar se o QR Code já veio na resposta
     if (createData.qrcode?.base64) {
       return {
         success: true,
@@ -129,7 +131,6 @@ export const createInstanceAndGenerateQR = async (instanceName: string): Promise
       };
     }
 
-    // 3. Se não veio, aguardar e buscar o QR Code
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     const qrResponse = await fetch(
@@ -257,7 +258,6 @@ export const checkIfInstanceExists = async (instanceName: string): Promise<{ exi
 
     const instances = await response.json();
     
-    // Procurar pela instância específica
     if (Array.isArray(instances)) {
       const instance = instances.find((inst: any) => 
         inst.instance?.instanceName === instanceName || inst.name === instanceName
@@ -316,7 +316,6 @@ export const monitorConnection = (
     onStatusChange(status);
   }, intervalMs);
 
-  // Retorna função para parar o monitoramento
   return () => clearInterval(interval);
 };
 
