@@ -17,9 +17,9 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     if (!iframeDoc) return;
 
     // ============================================================
-    // URL DA LOGO (Já configurada e pronta para usar)
+    // Logo do projeto (caminho relativo para public/logo.png)
     // ============================================================
-    const logoUrl = "https://i.ibb.co/0jTCGzb9/logo-png.png";
+    const logoUrl = `${window.location.origin}/logo.png`;
     // ============================================================
 
     const printHtml = `
@@ -60,7 +60,8 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
           
           .logo-container img {
             max-width: 180px;
-            max-height: 120px;
+            max-height: 100px;
+            width: auto;
             height: auto;
             display: block;
             margin: 0 auto 8px auto;
@@ -124,10 +125,6 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
               -webkit-print-color-adjust: exact;
               color-adjust: exact;
             }
-            
-            @page {
-              margin: 0;
-            }
           }
         </style>
       </head>
@@ -137,8 +134,6 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
             id="logo" 
             src="${logoUrl}" 
             alt="Logo Cantinho da Bere"
-            crossorigin="anonymous"
-            style="display: none;"
           />
           <div class="logo-text">CANTINHO DA BERE</div>
         </div>
@@ -162,42 +157,42 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
                 } catch (e) {
                   console.error('Erro ao imprimir:', e);
                 }
-              }, 1000);
+              }, 800);
             }
             
-            // Tenta carregar a logo
-            if (logoImg && logoImg.src) {
-              console.log('Carregando logo...');
-              logoImg.style.display = 'block';
+            if (logoImg) {
+              console.log('Tentando carregar logo de:', logoImg.src);
               
-              logoImg.onload = function() {
-                console.log('Logo carregada com sucesso!');
+              // Verifica se a imagem já está carregada (do cache)
+              if (logoImg.complete && logoImg.naturalHeight !== 0) {
+                console.log('Logo já estava carregada (cache)');
                 triggerPrint();
-              };
-              
-              logoImg.onerror = function(e) {
-                console.error('Erro ao carregar logo:', e);
-                console.log('Continuando sem logo...');
-                logoImg.style.display = 'none';
-                triggerPrint();
-              };
-              
-              // Timeout de segurança (caso a imagem demore muito)
-              setTimeout(() => {
-                if (!printAttempted) {
-                  console.warn('Timeout: imprimindo mesmo sem confirmar carregamento da logo');
+              } else {
+                // Aguarda carregar
+                logoImg.onload = function() {
+                  console.log('Logo carregada com sucesso!');
                   triggerPrint();
-                }
-              }, 3000);
+                };
+                
+                logoImg.onerror = function(e) {
+                  console.error('Erro ao carregar logo:', e);
+                  console.error('URL tentada:', logoImg.src);
+                  logoImg.style.display = 'none';
+                  triggerPrint();
+                };
+                
+                // Timeout de segurança
+                setTimeout(() => {
+                  if (!printAttempted) {
+                    console.warn('Timeout: imprimindo mesmo sem confirmar logo');
+                    triggerPrint();
+                  }
+                }, 2500);
+              }
             } else {
-              console.log('Logo não configurada, imprimindo sem logo');
+              console.error('Elemento de logo não encontrado');
               triggerPrint();
             }
-            
-            // Listener para quando a impressão terminar
-            window.onafterprint = function() {
-              console.log('Impressão finalizada');
-            };
           })();
         </script>
       </body>
@@ -207,13 +202,6 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     iframeDoc.open();
     iframeDoc.write(printHtml);
     iframeDoc.close();
-
-    // Cleanup quando componente desmontar
-    return () => {
-      if (iframe.contentWindow) {
-        iframe.contentWindow.onafterprint = null;
-      }
-    };
 
   }, [htmlContent, onFinished]);
 
@@ -230,7 +218,6 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
         border: 'none'
       }}
       title="Print Area"
-      sandbox="allow-same-origin allow-scripts allow-modals"
     />
   );
 };
