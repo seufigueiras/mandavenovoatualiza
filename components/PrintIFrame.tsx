@@ -1,6 +1,10 @@
 // components/PrintIFrame.tsx
+import React, { useEffect, useRef } from 'react';
 
-// ... (Restante das importações e interface)
+interface PrintIFrameProps {
+  htmlContent: string;
+  onFinished: () => void;
+}
 
 const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -13,7 +17,7 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
     if (!iframeDoc) return;
 
     // ============================================================
-    // USANDO A URL COMPLETA. Esta é a mais robusta para IFRAMES.
+    // USANDO A URL COMPLETA (Confirmado que funciona no servidor)
     // ============================================================
     const logoUrl = `${window.location.origin}/logo.png`;
     // ============================================================
@@ -26,17 +30,113 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Comprovante - Cantinho da Bere</title>
         <style>
-          /* ... (Todos os estilos CSS estão aqui) ... */
           @page { 
             size: 80mm auto; 
             margin: 0; 
           }
-          /* ... (o restante dos seus estilos CSS) ... */
-
+          
+          * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+          }
+          
+          body {
+            width: 80mm;
+            padding: 5mm;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+            background: white;
+            color: black;
+            line-height: 1.4;
+          }
+          
+          /* O logo-container foi removido do topo */
+          
+          .logo-footer { /* NOVO ESTILO */
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+          }
+          
+          .logo-footer img { /* NOVO ESTILO */
+            max-width: 180px;
+            max-height: 100px;
+            width: auto;
+            height: auto;
+            display: block;
+            margin: 0 auto 8px auto;
+            object-fit: contain;
+          }
+          
+          .logo-text {
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 5px 0;
+            letter-spacing: 1px;
+            color: #000;
+          }
+          
+          .content {
+            margin-top: 10px;
+          }
+          
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 10px 0; 
+          }
+          
+          td, th {
+            padding: 4px 2px;
+            text-align: left;
+          }
+          
+          .center { text-align: center; }
+          .right { text-align: right; }
+          .bold { font-weight: bold; }
+          
+          .total-line {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+          }
+          
+          .total { 
+            font-size: 1.2em; 
+            font-weight: bold; 
+          }
+          
+          .footer {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+            text-align: center;
+            font-size: 9pt;
+          }
+          
+          @media print {
+            body { 
+              margin: 0;
+              padding: 5mm;
+            }
+            
+            .logo-footer img {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+          }
         </style>
       </head>
       <body>
-        <div class="logo-container">
+        
+        <div class="content">
+          ${htmlContent}
+        </div>
+        
+        <div class="logo-footer">
           <img 
             id="logo" 
             src="${logoUrl}" 
@@ -45,56 +145,16 @@ const PrintIFrame: React.FC<PrintIFrameProps> = ({ htmlContent, onFinished }) =>
           <div class="logo-text">CANTINHO DA BERE</div>
         </div>
         
-        <div class="content">
-          ${htmlContent}
-        </div>
-        
         <script>
+          // O script de onload e triggerPrint foi simplificado, pois o problema de carregamento já foi resolvido.
           (function() {
-            const logoImg = document.getElementById('logo');
-            let printAttempted = false;
-            
-            function triggerPrint() {
-              if (printAttempted) return;
-              printAttempted = true;
-              
-              setTimeout(() => {
-                try {
-                  window.print();
-                } catch (e) {
-                  console.error('Erro ao imprimir:', e);
-                }
-              }, 800);
-            }
-            
-            if (logoImg) {
-              console.log('Tentando carregar logo de:', logoImg.src);
-              
-              // Verifica se a imagem já está carregada (do cache)
-              if (logoImg.complete && logoImg.naturalHeight !== 0) {
-                console.log('Logo já estava carregada (cache)');
-                triggerPrint();
-              } else {
-                // Aguarda carregar
-                logoImg.onload = function() {
-                  console.log('Logo carregada com sucesso!');
-                  triggerPrint();
-                };
-                
-                // *** REMOVEMOS: O código onerror para garantir que o elemento da imagem não seja escondido se falhar. ***
-                
-                // Timeout de segurança
-                setTimeout(() => {
-                  if (!printAttempted) {
-                    console.warn('Timeout: imprimindo mesmo sem confirmar logo');
-                    triggerPrint();
-                  }
-                }, 2500);
+            setTimeout(() => {
+              try {
+                window.print();
+              } catch (e) {
+                console.error('Erro ao imprimir:', e);
               }
-            } else {
-              console.error('Elemento de logo não encontrado');
-              triggerPrint();
-            }
+            }, 800); // Dá um tempo para o navegador renderizar
           })();
         </script>
       </body>
